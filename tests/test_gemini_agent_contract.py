@@ -8,7 +8,15 @@ from pydantic import ValidationError
 
 from bosai_studio.agent_contracts import AgentProposalEnvelope
 from bosai_studio.contracts import Action
-from bosai_studio.gemini_agent import GRAFANA_TOOL_ALLOWLIST, MUTATION_TOOLS_EXPOSED, _same_origin
+from bosai_studio.gemini_agent import (
+    GRAFANA_TOOL_ALLOWLIST,
+    MUTATION_TOOLS_EXPOSED,
+    PROVEN_INCIDENT_DIRECTION,
+    PROVEN_INCIDENT_LIMIT,
+    PROVEN_INCIDENT_LOGQL,
+    PROVEN_INCIDENT_START,
+    _same_origin,
+)
 from bosai_studio.gemini_config import load_gemini_runtime_config
 from scripts.gemini_agent_readback import _extract_json_payload
 
@@ -53,6 +61,17 @@ class GeminiProposalContractTests(unittest.TestCase):
         self.assertNotIn("execute", GRAFANA_TOOL_ALLOWLIST)
         self.assertNotIn("restart", GRAFANA_TOOL_ALLOWLIST)
         self.assertNotIn("reroute", GRAFANA_TOOL_ALLOWLIST)
+
+    def test_proven_phase4_loki_retrieval_contract_is_locked(self) -> None:
+        self.assertEqual(
+            PROVEN_INCIDENT_LOGQL,
+            '{service_name="bosai-studio-media-pipeline"} |= "TRANSCODE_A_CODEC_INIT_TIMEOUT"',
+        )
+        self.assertEqual(PROVEN_INCIDENT_START, "now-24h")
+        self.assertEqual(PROVEN_INCIDENT_LIMIT, 20)
+        self.assertEqual(PROVEN_INCIDENT_DIRECTION, "backward")
+        self.assertNotIn("incident_id=", PROVEN_INCIDENT_LOGQL)
+        self.assertNotIn('{service="', PROVEN_INCIDENT_LOGQL)
 
     def test_markdown_json_fence_is_tolerated_but_commentary_is_not(self) -> None:
         raw = '{"proposal_only":true}'
