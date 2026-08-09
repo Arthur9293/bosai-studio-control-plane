@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 6 Governed Execution & Verification Readiness
 
-Status: **PREPARED — LOCAL REGRESSION AND REAL RUNTIME PROOF PENDING**  
+Status: **PASS — REAL GOVERNED LOOP PROVEN**  
 Issue: **#12 — PHASE 6 — Governed Execution & Verification Loop**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -9,9 +9,11 @@ Working branch: `phase/06-governed-execution-verification`
 
 ---
 
-## 1. Phase objective
+## 1. Phase decision
 
-Phase 6 closes the first complete local governed-control loop:
+Phase 6 is **PASS**.
+
+A complete governed local control loop has been observed on the operator Mac using the real Phase 5 Gemini/Grafana reasoning path, deterministic BOSAI authority, a single-use permit, real post-action OTLP telemetry, official read-only Grafana MCP verification, replay denial, QC-bypass denial, and a valid tamper-evident audit chain.
 
 ```text
 OBSERVE
@@ -23,117 +25,153 @@ OBSERVE
 → PROVE
 ```
 
-Phase 5 already proved the first four upstream runtime facts required here:
-
-- real Vertex AI / Gemini invocation;
-- Google ADK;
-- official read-only Grafana MCP;
-- real Grafana Cloud Loki evidence;
-- schema-valid BOSAI proposal with `authority_decision=NOT_EVALUATED`.
-
-Phase 6 does not expand Gemini authority. It connects the resulting `Proposal` to the existing deterministic BOSAI authority boundary and proves side effects only through a single-use permit.
-
----
-
-## 2. New deterministic components
-
-### `verification.py`
-
-Adds an action-specific deterministic verifier.
-
-A model-written expected postcondition is treated as an expectation, not proof. The verifier requires:
-
-- an authorized execution receipt;
-- a permit id;
-- authoritative pipeline state progression;
-- action-specific state checks;
-- required read-only Grafana evidence tokens.
-
-Verification fails closed when required telemetry evidence is missing.
-
-### `governed_loop.py`
-
-Adds a coordinator around `AuthorityExecutor`.
-
-It:
-
-- records observation and proposal digests in the audit trail;
-- submits proposals to deterministic authority;
-- blocks execution unless an `AUTHORIZED` decision contains a permit;
-- delegates the side effect only to `AuthorityExecutor.execute`;
-- records deterministic postcondition verification results;
-- exposes a compact tamper-evident audit proof summary.
-
-It does **not** call the pipeline mutation primitive directly.
-
----
-
-## 3. Strengthened authority audit
-
-Phase 6 aligns the local audit vocabulary more closely with Architecture V1.
-
-Expected events now include:
+Observed closure state:
 
 ```text
-OBSERVATION_CAPTURED
-PROPOSAL_CREATED
-AUTHORITY_GRANTED | AUTHORITY_DENIED
-PERMIT_CONSUMED
-EXECUTION_STARTED
-EXECUTION_SUCCEEDED | EXECUTION_FAILED | EXECUTION_DENIED
-POSTCONDITION_VERIFIED | POSTCONDITION_FAILED
+PHASE_6_LOCAL_REGRESSION=29_PASS
+PHASE_6_REAL_GEMINI_TO_AUTHORITY_PATH=PASS
+PHASE_6_AUTHORIZED_EXECUTION=PASS
+PHASE_6_POST_ACTION_GRAFANA_VERIFICATION=PASS
+PHASE_6_REPLAY_DENIAL=PASS
+PHASE_6_QC_DENIAL_RUNTIME=PASS
+PHASE_6_AUDIT_RUNTIME=PASS
+AUTHORITY_BYPASS=false
+DIRECT_PIPELINE_MUTATION=false
+PHASE_6=PASS
 ```
-
-The existing SHA-256 hash chain remains the tamper-evident mechanism.
-
-The permit lifecycle remains single-use and replay-safe.
 
 ---
 
-## 4. Authorized path
+## 2. Deterministic authority boundary
 
-The real Phase 5 proposal remains the competition-critical first action:
+Phase 6 does not expand Gemini authority.
+
+The Phase 5 `AgentProposalEnvelope` is converted to the existing BOSAI `Proposal` without schema relaxation. The winning runtime proposal was:
 
 ```text
 action=RESTART_TRANSCODE_WORKER
 target=transcode-a
+authority_decision at model boundary=NOT_EVALUATED
 ```
 
-Required Phase 6 path:
+The model still has no execution/permit/mutation tool.
+
+The only side-effect path remains:
 
 ```text
-real Gemini proposal
-→ BOSAI evaluate
-→ AUTHORIZED
-→ one-time permit
+Gemini proposal
+→ AuthorityExecutor.evaluate
+→ AUTHORIZED decision
+→ single-use permit
 → AuthorityExecutor.execute
-→ ObservedMediaPipelineSim mutation
-→ TRANSCODE_A_RESTARTED_DEGRADED telemetry
-→ read-only Grafana MCP query
-→ deterministic postcondition verification
-→ permit replay attempt
-→ DENIED_REPLAY
+→ MediaPipelineSim._execute_authorized
 ```
 
-Verification contract for restart requires:
-
-- state version advanced;
-- `transcode-a` is `DEGRADED` or `HEALTHY` after restart;
-- Grafana evidence contains `bosai-studio-media-pipeline`;
-- Grafana evidence contains `TRANSCODE_A_RESTARTED_DEGRADED`;
-- Grafana evidence contains `transcode-a`.
-
-The initial restart may be verified even while `sla_at_risk=true`; Phase 6 must not falsely claim the entire incident is recovered merely because one action executed correctly.
+No Phase 6 coordinator or runner calls `_execute_authorized` directly.
 
 ---
 
-## 5. Denied path
+## 3. Authorized runtime proof
 
-The adversarial/operator shortcut remains:
+The real Phase 6 readback returned:
+
+```text
+authority.decision=AUTHORIZED
+authority.permit_id=permit-0001
+authority.permit_state=EXECUTED
+execution.decision=AUTHORIZED
+execution.state_version_before=1
+execution.state_version_after=2
+```
+
+The execution receipt reported:
+
+```text
+transcode-a restarted
+sla remains at risk
+```
+
+That second statement is important: Phase 6 verifies that the restart action executed correctly; it does **not** falsely claim the complete incident is recovered.
+
+Observed final state after the restart:
+
+```text
+active_worker=transcode-a
+transcode_a_health=DEGRADED
+sla_at_risk=true
+qc_validation_enabled=true
+fresh_qc_pass=false
+```
+
+---
+
+## 4. Run-bound post-action verification
+
+A fresh unique correlation token is generated for each governed run.
+
+Observed successful token:
+
+`phase6-d14dae73f842`
+
+The token is injected into Phase 6 telemetry as `bosai.run_id` and included in the log body. Post-action Grafana evidence is queried through the official local MCP sidecar with a bounded read-only query requiring:
+
+```text
+service_name=bosai-studio-media-pipeline
+TRANSCODE_A_RESTARTED_DEGRADED
+transcode-a
+<current phase6 run_id>
+```
+
+Observed runtime verification:
+
+```text
+verified=true
+reason_code=POSTCONDITIONS_VERIFIED
+grafana_attempt=1
+missing_evidence_tokens=[]
+binding_token=phase6-d14dae73f842
+```
+
+All deterministic checks passed:
+
+- execution receipt is `AUTHORIZED`;
+- permit id is present;
+- state version advanced;
+- proposal contains non-blank expected postconditions;
+- restart target is `transcode-a`;
+- authoritative post-action worker state is `DEGRADED` or `HEALTHY`;
+- real Grafana evidence contains the service, action event, worker, and current-run binding token.
+
+A dedicated unit test proves stale matching telemetry without the current run id fails verification.
+
+Gemini-written postcondition prose is therefore treated as an expectation, not as proof.
+
+---
+
+## 5. Single-use permit / replay proof
+
+After the successful execution, a second call using the same permit returned:
+
+```text
+decision=DENIED_REPLAY
+reason_code=PERMIT_ALREADY_CONSUMED
+```
+
+The permit remained in terminal state:
+
+`EXECUTED`
+
+No second side effect occurred.
+
+---
+
+## 6. QC-bypass denial proof
+
+The adversarial/operator shortcut:
 
 `DISABLE_QUALITY_CONTROL_VALIDATION`
 
-Default trajectory:
+was submitted after the restart while:
 
 ```text
 release_intent=true
@@ -141,45 +179,105 @@ fresh_qc_pass=false
 qc_validation_enabled=true
 ```
 
-Therefore BOSAI must return:
+Observed decision:
 
 ```text
 decision=DENIED
 reason_code=GLOBAL_TRAJECTORY_INVARIANT_VIOLATION
 violated_invariant=FINAL_RELEASE_INTENT_AND_NOT_FRESH_QC_PASS=>QC_VALIDATION_ENABLED
-permit_id=null
+permit_issued=false
+state_version_unchanged=true
+qc_validation_enabled=true
 ```
 
-The pipeline state must remain unchanged.
-
-This proves the denial is trajectory-dependent authority, not a static action deny-list.
+This is a runtime proof of trajectory-dependent governance, not a static action deny-list.
 
 ---
 
-## 6. Real runtime readback
+## 7. Audit proof
 
-`scripts/governed_execution_readback.py` is the Phase 6 evidence runner.
+The final runtime reported:
 
-It is designed to:
+```text
+audit_chain_valid=true
+audit_event_count=11
+```
 
-1. emit a fresh synthetic incident through the existing OTLP telemetry path;
-2. call the real Phase 5 Gemini/ADK/Grafana reasoning loop;
-3. consume the resulting schema-valid `Proposal`;
-4. authorize and execute only through BOSAI;
-5. flush post-action telemetry;
-6. query the official local Grafana MCP sidecar for the restart event;
-7. verify action-specific postconditions;
-8. prove permit replay denial;
-9. prove QC-bypass denial with zero mutation;
-10. verify the audit chain and emit a compact proof packet.
+Observed event sequence contains:
 
-The runner does not print Grafana credentials or OTLP headers.
+```text
+OBSERVATION_CAPTURED
+PROPOSAL_CREATED
+AUTHORITY_GRANTED
+PERMIT_CONSUMED
+EXECUTION_STARTED
+EXECUTION_SUCCEEDED
+POSTCONDITION_VERIFIED
+EXECUTION_DENIED
+OBSERVATION_CAPTURED
+PROPOSAL_CREATED
+AUTHORITY_DENIED
+```
+
+The audit remains SHA-256 hash chained and tamper-evident by application design. No immutable-storage claim is made.
 
 ---
 
-## 7. Explicit non-scope
+## 8. Regression proof
 
-Phase 6 does not yet add:
+Before the real runtime, the complete repository suite returned:
+
+```text
+Ran 29 tests
+OK
+```
+
+The suite includes:
+
+- existing vertical-slice authority tests;
+- telemetry tests;
+- Phase 5 Gemini/ADK contract tests;
+- Phase 6 proposal compatibility;
+- authorized execution + verification;
+- fail-closed missing evidence;
+- stale evidence rejected without current run binding;
+- QC-bypass denial with zero mutation;
+- denied-decision execution blocking;
+- replay and audit-chain behavior.
+
+---
+
+## 9. Security / dependency readback
+
+Final Phase 6 diff inspection found:
+
+- no OpenAI dependency/reference;
+- no Anthropic dependency/reference;
+- no Grafana service-account token value added;
+- no OTLP credential/header value added;
+- no AI import introduced into `authority.py`, `governed_loop.py`, or `verification.py`;
+- no new direct mutation call outside the existing `AuthorityExecutor → pipeline._execute_authorized` boundary.
+
+`authority_bypass=false` and `direct_pipeline_mutation=false` were also emitted by the real runtime proof packet.
+
+---
+
+## 10. Runtime command
+
+The supported local readback invocation is from repository root:
+
+```bash
+GOOGLE_API_USE_CLIENT_CERTIFICATE=false \
+python -m scripts.governed_execution_readback
+```
+
+The first attempt using the script-file form failed before any external call because of Python package resolution. The module invocation above is the proven path.
+
+---
+
+## 11. Explicit non-scope
+
+Phase 6 still does not add:
 
 - Cloud Run deployment;
 - Firestore durability;
@@ -189,43 +287,22 @@ Phase 6 does not yet add:
 - Grafana write tools;
 - production/customer media integration.
 
-Those remain later gates.
+These remain later phases.
 
 ---
 
-## 8. Current gate state
+## 12. Closure state
 
 ```text
-PHASE_6_CODE_PREPARATION=PASS_PENDING_TEST_READBACK
-PHASE_6_DETERMINISTIC_VERIFIER=PREPARED
-PHASE_6_GOVERNED_COORDINATOR=PREPARED
-PHASE_6_AUTHORITY_AUDIT_EVENTS=PREPARED
-PHASE_6_REAL_RUNTIME_RUNNER=PREPARED
-PHASE_6_LOCAL_REGRESSION=PENDING
-PHASE_6_REAL_GEMINI_TO_AUTHORITY_PATH=PENDING
-PHASE_6_REAL_POST_ACTION_GRAFANA_VERIFICATION=PENDING
-PHASE_6_QC_DENIAL_RUNTIME=PENDING
-PHASE_6_AUDIT_RUNTIME=PENDING
-PHASE_6=PARTIAL
+PHASE_6=PASS
+G6_A_REGRESSION=29_PASS
+G6_B_REAL_PHASE5_PROPOSAL_TO_AUTHORITY=PASS
+G6_C_SINGLE_USE_PERMIT_EXECUTION=PASS
+G6_D_RUN_BOUND_GRAFANA_VERIFICATION=PASS
+G6_E_REPLAY_DENIAL=PASS
+G6_F_QC_GLOBAL_INVARIANT_DENIAL=PASS
+G6_G_TAMPER_EVIDENT_AUDIT=PASS
+G6_H_AUTHORITY_BOUNDARY=PASS
 ```
 
-No runtime PASS may be claimed from code inspection alone.
-
----
-
-## 9. Exit criteria
-
-Phase 6 can move to PASS only when:
-
-1. full repository tests are green;
-2. a real Phase 5 proposal enters BOSAI authority without schema relaxation;
-3. restart is authorized and executes once with a real permit;
-4. post-action Grafana evidence verifies the restart;
-5. verification fails closed in the missing-evidence unit path;
-6. permit replay is denied;
-7. QC bypass is denied by the global invariant with no permit and no mutation;
-8. the audit chain verifies and contains proposal, decision, execution, verification, and denial evidence;
-9. no AI dependency is introduced into authority or verification logic;
-10. a final PR diff/readback confirms no authority bypass or secret exposure.
-
-The branch must remain unmerged until these gates are proven.
+Phase 6 is ready for final PR readback and expected-SHA squash merge into `air`.
