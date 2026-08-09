@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import os
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 import httpx
 from mcp import ClientSession
@@ -47,8 +48,12 @@ def _same_origin(url: str) -> str:
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
-async def _query_post_action_evidence(mcp_url: str, datasource_uid: str) -> str:
-    logql = f'{{service_name="{SERVICE_NAME}"}} |= "{POST_ACTION_EVENT}"'
+async def _query_post_action_evidence(mcp_url: str, datasource_uid: str, run_id: str) -> str:
+    logql = (
+        f'{{service_name="{SERVICE_NAME}"}} '
+        f'|= "{POST_ACTION_EVENT}" '
+        f'|= "{run_id}"'
+    )
     async with httpx.AsyncClient(headers={"Origin": _same_origin(mcp_url)}) as http_client:
         async with streamable_http_client(mcp_url, http_client=http_client) as (
             read_stream,
@@ -70,13 +75,17 @@ async def _query_post_action_evidence(mcp_url: str, datasource_uid: str) -> str:
                 return json.dumps(_jsonable(result), sort_keys=True, default=str)
 
 
-async def _wait_for_post_action_evidence(mcp_url: str, datasource_uid: str) -> tuple[str, int]:
+async def _wait_for_post_action_evidence(
+    mcp_url: str,
+    datasource_uid: str,
+    run_id: str,
+) -> tuple[str, int]:
     attempts = int(os.getenv("BOSAI_PHASE6_VERIFY_ATTEMPTS", str(DEFAULT_VERIFY_ATTEMPTS)))
     delay = float(os.getenv("BOSAI_PHASE6_VERIFY_DELAY_SECONDS", str(DEFAULT_VERIFY_DELAY_SECONDS)))
     last = ""
     for attempt in range(1, attempts + 1):
-        last = await _query_post_action_evidence(mcp_url, datasource_uid)
-        if SERVICE_NAME in last and POST_ACTION_EVENT in last and "transcode-a" in last:
+        last = await _query_post_action_evidence(mcp_url, datasource_uid, run_id)
+        if all(token in last for token in (SERVICE_NAME, POST_ACTION_EVENT, "transcode-a", run_id)):
             return last, attempt
         if attempt < attempts:
             await asyncio.sleep(delay)
@@ -86,8 +95,9 @@ async def _wait_for_post_action_evidence(mcp_url: str, datasource_uid: str) -> t
 async def run_phase6() -> dict[str, object]:
     config = load_gemini_runtime_config()
     telemetry = PipelineTelemetry.from_otlp_env()
+    run_id = f"phase6-{uuid4().hex[:12]}"
     try:
-        pipeline = ObservedMediaPipelineSim(telemetry)
+        pipeline = ObservedMediaPipelineSim(telemetry, run_id=run_id)
 
         # Fresh synthetic incident evidence for this exact governed run.
         pipeline.emit_initial_incident()
@@ -128,9 +138,17 @@ async def run_phase6() -> dict[str, object]:
         evidence_text, evidence_attempt = await _wait_for_post_action_evidence(
             config.grafana_mcp_url,
             config.loki_datasource_uid,
+            run_id,
         )
         after = pipeline.snapshot()
-        verification = loop.verify(proposal, receipt, before, after, evidence_text)
+        verification = loop.verify(
+            proposal,
+            receipt,
+            before,
+            after,
+            evidence_text,
+            evidence_binding_token=run_id,
+        )
         if not verification.verified:
             raise RuntimeError(
                 "post-action verification failed closed: "
@@ -168,8 +186,11 @@ async def run_phase6() -> dict[str, object]:
         if not proof["audit_chain_valid"]:
             raise RuntimeError("audit chain verification failed")
 
+        permit_state = authority.permit_state(decision.permit_id)
+
         return {
             "phase": "PHASE_6_GOVERNED_EXECUTION_VERIFICATION",
+            "run_id": run_id,
             "vertex_ai": True,
             "gemini_model": config.model,
             "phase5_real_proposal_consumed": True,
@@ -184,9 +205,7 @@ async def run_phase6() -> dict[str, object]:
                 "decision": decision.decision.value,
                 "policy_version": decision.policy_version,
                 "permit_id": decision.permit_id,
-                "permit_state": (authority.permit_state(decision.permit_id) or "UNKNOWN").value
-                if authority.permit_state(decision.permit_id)
-                else "UNKNOWN",
+                "permit_state": permit_state.value if permit_state else "UNKNOWN",
             },
             "execution": {
                 "decision": receipt.decision.value,
@@ -197,6 +216,7 @@ async def run_phase6() -> dict[str, object]:
             "verification": {
                 "verified": verification.verified,
                 "reason_code": verification.reason_code,
+                "binding_token": verification.evidence_binding_token,
                 "missing_evidence_tokens": list(verification.missing_evidence_tokens),
                 "required_evidence_tokens": list(verification.required_evidence_tokens),
                 "evidence_digest": verification.evidence_digest,
