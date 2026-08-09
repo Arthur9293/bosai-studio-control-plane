@@ -8,8 +8,13 @@ from pydantic import ValidationError
 
 from bosai_studio.agent_contracts import AgentProposalEnvelope
 from bosai_studio.contracts import Action
-from bosai_studio.gemini_agent import GRAFANA_TOOL_ALLOWLIST, MUTATION_TOOLS_EXPOSED
-from bosai_studio.gemini_config import load_gemini_runtime_config
+from bosai_studio.gemini_agent import (
+    GRAFANA_TOOL_ALLOWLIST,
+    MUTATION_TOOLS_EXPOSED,
+    _stdio_environment,
+)
+from bosai_studio.gemini_config import GeminiRuntimeConfig, load_gemini_runtime_config
+from scripts.gemini_agent_readback import _extract_json_payload
 
 
 VALID_OUTPUT = {
@@ -53,6 +58,19 @@ class GeminiProposalContractTests(unittest.TestCase):
         self.assertNotIn("restart", GRAFANA_TOOL_ALLOWLIST)
         self.assertNotIn("reroute", GRAFANA_TOOL_ALLOWLIST)
 
+    def test_markdown_json_fence_is_tolerated_but_commentary_is_not(self) -> None:
+        raw = '{"proposal_only":true}'
+        payload, fenced = _extract_json_payload(raw)
+        self.assertEqual(payload, raw)
+        self.assertFalse(fenced)
+
+        fenced_payload, fenced = _extract_json_payload(f"```json\n{raw}\n```")
+        self.assertEqual(fenced_payload, raw)
+        self.assertTrue(fenced)
+
+        with self.assertRaisesRegex(RuntimeError, "standalone JSON object"):
+            _extract_json_payload(f"Here is the result:\n{raw}")
+
 
 class GeminiRuntimeConfigTests(unittest.TestCase):
     def test_vertex_ai_mode_is_required(self) -> None:
@@ -72,6 +90,24 @@ class GeminiRuntimeConfigTests(unittest.TestCase):
             config = load_gemini_runtime_config()
         self.assertEqual(config.model, "gemini-2.5-flash")
         self.assertEqual(config.loki_datasource_uid, "grafanacloud-logs")
+
+    def test_mcp_subprocess_receives_required_grafana_environment(self) -> None:
+        config = GeminiRuntimeConfig(
+            google_cloud_project="bosai-hackathon-project",
+            google_cloud_location="global",
+            model="gemini-2.5-flash",
+            grafana_url="https://example.grafana.net",
+            grafana_service_account_token="secret-value",
+            loki_datasource_uid="grafanacloud-logs",
+        )
+        with patch.dict(os.environ, {"PATH": "/usr/bin", "HOME": "/tmp/home"}, clear=True):
+            child_env = _stdio_environment(config)
+
+        self.assertEqual(child_env["GRAFANA_URL"], "https://example.grafana.net")
+        self.assertEqual(child_env["GRAFANA_SERVICE_ACCOUNT_TOKEN"], "secret-value")
+        self.assertEqual(child_env["PATH"], "/usr/bin")
+        self.assertEqual(child_env["HOME"], "/tmp/home")
+        self.assertNotIn("GOOGLE_CLOUD_PROJECT", child_env)
 
 
 if __name__ == "__main__":
