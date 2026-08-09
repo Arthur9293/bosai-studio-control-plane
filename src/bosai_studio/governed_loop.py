@@ -75,8 +75,17 @@ class GovernedControlLoop:
         before: PipelineState,
         after: PipelineState,
         evidence_text: str,
+        *,
+        evidence_binding_token: str | None = None,
     ) -> VerificationResult:
-        result = verify_authorized_execution(proposal, receipt, before, after, evidence_text)
+        result = verify_authorized_execution(
+            proposal,
+            receipt,
+            before,
+            after,
+            evidence_text,
+            evidence_binding_token=evidence_binding_token,
+        )
         event_type = "POSTCONDITION_VERIFIED" if result.verified else "POSTCONDITION_FAILED"
         self.authority.audit.append(
             event_type,
@@ -85,6 +94,7 @@ class GovernedControlLoop:
                 "action": result.action.value,
                 "target": result.target,
                 "reason_code": result.reason_code,
+                "evidence_binding_token": result.evidence_binding_token,
                 "evidence_digest": result.evidence_digest,
                 "missing_evidence_tokens": list(result.missing_evidence_tokens),
                 "checks": [asdict(item) for item in result.checks],
