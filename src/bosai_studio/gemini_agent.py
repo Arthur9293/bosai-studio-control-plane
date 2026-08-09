@@ -1,55 +1,26 @@
 from __future__ import annotations
 
 import json
-import os
 
 from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool import McpToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
-from mcp import StdioServerParameters
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 
 from .agent_contracts import AgentProposalEnvelope
 from .gemini_config import GeminiRuntimeConfig
 
 
-MCP_GRAFANA_IMAGE = "grafana/mcp-grafana:1.0.0"
 GRAFANA_TOOL_ALLOWLIST = ("query_loki_logs",)
 MUTATION_TOOLS_EXPOSED: tuple[str, ...] = ()
 
 
-def _stdio_environment(config: GeminiRuntimeConfig) -> dict[str, str]:
-    """Build the smallest practical environment for the Docker MCP subprocess."""
-    env = {
-        "GRAFANA_URL": config.grafana_url,
-        "GRAFANA_SERVICE_ACCOUNT_TOKEN": config.grafana_service_account_token,
-    }
-    for name in ("PATH", "HOME", "DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"):
-        value = os.getenv(name)
-        if value:
-            env[name] = value
-    return env
-
-
 def _grafana_toolset(config: GeminiRuntimeConfig) -> McpToolset:
+    """Connect ADK only to the local read-only Grafana MCP HTTP endpoint."""
     return McpToolset(
-        connection_params=StdioConnectionParams(
-            server_params=StdioServerParameters(
-                command="docker",
-                args=[
-                    "run",
-                    "--rm",
-                    "-i",
-                    "-e",
-                    "GRAFANA_URL",
-                    "-e",
-                    "GRAFANA_SERVICE_ACCOUNT_TOKEN",
-                    MCP_GRAFANA_IMAGE,
-                    "-t",
-                    "stdio",
-                    "--disable-write",
-                ],
-                env=_stdio_environment(config),
-            ),
+        connection_params=StreamableHTTPConnectionParams(
+            url=config.grafana_mcp_url,
+            timeout=30,
+            sse_read_timeout=60,
         ),
         tool_filter=list(GRAFANA_TOOL_ALLOWLIST),
     )
