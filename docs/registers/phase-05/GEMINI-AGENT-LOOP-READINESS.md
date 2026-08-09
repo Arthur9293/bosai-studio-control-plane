@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 5 Gemini Agent Loop Readback
 
-Status: **PASS — RUNTIME PROVEN**  
+Status: **HOLD — POSTCONDITION CONTRACT STRENGTHENED; RUNTIME REVALIDATION REQUIRED**  
 Issue: **#10 — PHASE 5 — Gemini Agent Loop**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -11,31 +11,34 @@ Working branch: `phase/05-gemini-agent-loop`
 
 ## 1. Phase decision
 
-Phase 5 is **PASS**.
+The complete real Gemini/ADK/Grafana trajectory has been proven, but final Phase 5 closure is temporarily held after red-team readback found one semantic weakness in the successful proposal: `expected_postconditions` was present but empty.
 
-The real bounded Gemini reasoning loop has been observed on the operator Mac using Vertex AI, Google ADK, the official Grafana MCP runtime, and real Grafana Cloud Loki evidence.
+That is insufficient for the BOSAI control loop because `VERIFY` requires at least one concrete post-condition that can be checked after an authorized action.
+
+The deterministic proposal schema and Gemini instruction have therefore been strengthened so that `expected_postconditions` must be non-empty and contain non-blank strings. The successful runtime must be repeated against this stronger contract before Phase 5 can be merged.
 
 ```text
 PHASE_5_CODE_PREPARATION=PASS
 VERTEX_AI_AUTH_PROVEN=true
 VERTEX_AI_API_ENABLED=true
 ADK_DEPENDENCY_BINDING=PASS
-REGRESSION_TESTS=22_PASS
 DIRECT_GRAFANA_MCP_STDIO=PASS
 LOCAL_GRAFANA_MCP_HTTP_HEALTH=PASS
 DIRECT_PYTHON_MCP_HTTP_PROBE=PASS
-ADK_MCP_SESSION=PASS
-REAL_GEMINI_INVOCATION=PASS
+ADK_MCP_SESSION=PASS_PREVIOUS_BUILD
+REAL_GEMINI_INVOCATION=PASS_PREVIOUS_BUILD
 REAL_GEMINI_GRAFANA_MCP_TOOL_USE_PROVEN=true
-REAL_GRAFANA_EVIDENCE_MATCH=PASS
-STRUCTURED_PROPOSAL_RUNTIME_PROVEN=true
+REAL_GRAFANA_EVIDENCE_MATCH=PASS_PREVIOUS_BUILD
 AUTHORITY_ENGINE_INVOKED=false
 PERMIT_ISSUED=false
 MUTATION_ATTEMPTED=false
-PHASE_5=PASS
+POSTCONDITION_CONTRACT_STRENGTHENED=true
+REGRESSION_AFTER_STRENGTHENING=PENDING
+STRUCTURED_PROPOSAL_RUNTIME_PROVEN=REVALIDATION_REQUIRED
+PHASE_5=HOLD
 ```
 
-No mocked model response is used for this runtime proof.
+No mocked model response may satisfy the remaining gate.
 
 ---
 
@@ -46,7 +49,7 @@ Pinned Phase 5 runtime dependencies:
 - `google-adk[mcp]==2.5.0`
 - `google-auth[aiohttp]>=2.56,<3`
 
-Model target observed in the successful readback:
+Model target:
 
 `gemini-2.5-flash`
 
@@ -54,17 +57,13 @@ Vertex AI mode is mandatory:
 
 `GOOGLE_GENAI_USE_VERTEXAI=true`
 
-Operator preflight proved:
+Operator preflight has proven:
 
 - Google Cloud CLI available;
 - Application Default Credentials available;
 - project `bosai-gemini-xprize` selected;
 - Vertex AI API `aiplatform.googleapis.com` enabled;
 - `GOOGLE_CLOUD_LOCATION=global` configured.
-
-The successful runner readback reports:
-
-`vertex_ai=true`
 
 No Google credential JSON or access token is committed.
 
@@ -82,21 +81,19 @@ The sidecar is launched with:
 
 - `grafana/mcp-grafana:1.0.0`;
 - `--disable-write`;
-- an explicit host allowlist for `localhost:8010` and `127.0.0.1:8010`;
+- an explicit host allowlist;
 - an explicit local Origin allowlist;
 - no wildcard host/origin bypass.
 
 The sidecar owns Grafana credentials. The Gemini runtime configuration does not receive the Grafana service-account token.
 
-Observed transport proof:
+Previously observed transport proof remains valid:
 
 ```text
 MCP_HTTP_HEALTH=200
 MCP_HTTP_INITIALIZE=PASS
 MCP_HTTP_TARGET_TOOL_PRESENT=true
 ```
-
-The direct Python MCP HTTP probe succeeded before the ADK/Gemini run, proving the lower-level protocol path independently.
 
 ---
 
@@ -121,7 +118,7 @@ Gemini does not receive:
 - restart/reroute mutation tools;
 - Grafana write tools.
 
-The successful readback reports:
+The successful previous-build readback reported:
 
 ```text
 authority_engine_invoked=false
@@ -129,7 +126,7 @@ permit_issued=false
 mutation_attempted=false
 ```
 
-This preserves the Phase 2 rule:
+This preserves:
 
 `Intelligence is not authority.`
 
@@ -137,9 +134,7 @@ This preserves the Phase 2 rule:
 
 ## 5. Locked Grafana retrieval contract
 
-The first incident read is deliberately bounded to the exact Loki shape already proven during Phase 4.
-
-Observed successful tool call:
+The first incident read is bounded to the exact Loki shape already proven during Phase 4.
 
 ```text
 tool=query_loki_logs
@@ -150,45 +145,39 @@ limit=20
 direction=backward
 ```
 
-The MCP tool response contained both required proof values:
+The successful previous-build MCP response contained:
 
-- `TRANSCODE_A_CODEC_INIT_TIMEOUT`
-- `bosai-studio-media-pipeline`
-
-and identified the affected worker as `transcode-a`.
-
-The runner therefore reports:
-
-```text
-grafana_mcp_required_tool_observed=true
-grafana_mcp_evidence_verified=true
-```
+- `TRANSCODE_A_CODEC_INIT_TIMEOUT`;
+- `bosai-studio-media-pipeline`;
+- worker `transcode-a`.
 
 ---
 
-## 6. Structured proposal proof
+## 6. Strengthened structured proposal boundary
 
-Gemini's final response is validated deterministically by `AgentProposalEnvelope` before conversion to the existing BOSAI `Proposal` dataclass.
+Gemini's final response must validate deterministically against `AgentProposalEnvelope` before conversion to the existing BOSAI `Proposal` dataclass.
 
-Successful runtime proposal:
+The envelope requires:
 
-```text
-incident_id=incident-demo-001
-action=RESTART_TRANSCODE_WORKER
-target=transcode-a
-authority_decision=NOT_EVALUATED
-proposal_only=true
-```
+- `proposal_id`;
+- `incident_id`;
+- one existing BOSAI `Action`;
+- `target`;
+- `reason`;
+- at least one non-blank `evidence_ref`;
+- **at least one non-blank `expected_postcondition`**;
+- `authority_decision=NOT_EVALUATED`;
+- `proposal_only=true`.
 
-The reasoning is grounded in the real Grafana log entry showing the codec initialization timeout on `transcode-a` while the delivery SLA is at risk.
+The new postcondition requirement is deliberate: a proposal is incomplete unless it states what later telemetry should prove if an authorized execution succeeds.
 
-The model returned its JSON inside one markdown JSON fence; the runner stripped that single wrapper and then applied strict schema validation. No surrounding prose or hidden fields are accepted.
-
-The model cannot claim `AUTHORIZED`, invent a permit, or execute the proposal.
+Extra fields remain rejected. A model output containing `authority_decision=AUTHORIZED`, an invented `permit_id`, an empty postcondition list, or blank postconditions fails deterministic validation.
 
 ---
 
-## 7. Proven real trajectory
+## 7. Previous real trajectory proof
+
+The previous build proved:
 
 ```text
 FINAL_TRAILER_DELIVERY_SLA_AT_RISK
@@ -207,43 +196,47 @@ real TRANSCODE_A_CODEC_INIT_TIMEOUT evidence
         ↓
 Gemini proposes RESTART_TRANSCODE_WORKER / transcode-a
         ↓
-AgentProposalEnvelope deterministic validation
+AgentProposalEnvelope validation
         ↓
 BOSAI Proposal
         ↓
 STOP
 ```
 
-No BOSAI authority evaluation or mutation is invoked by Gemini in Phase 5.
+The only closure defect found during final red-team readback was the empty `expected_postconditions` list.
 
 ---
 
-## 8. Regression proof
+## 8. Remaining closure gate
 
-After the final retrieval-contract changes, the full repository suite returned:
+Phase 5 may return to PASS only after:
 
-```text
-Ran 22 tests in 0.004s
-OK
-```
-
-This includes the existing governed-execution and telemetry tests plus Phase 5 agent, transport, same-origin, and retrieval-contract tests.
+1. the strengthened repository regression is green;
+2. the real Gemini runner is repeated against the current head;
+3. `query_loki_logs` again returns the required real BOSAI evidence;
+4. the proposal again selects an evidence-grounded action/target;
+5. `expected_postconditions` contains at least one concrete observable verification condition;
+6. `authority_decision=NOT_EVALUATED`;
+7. `authority_engine_invoked=false`;
+8. `permit_issued=false`;
+9. `mutation_attempted=false`.
 
 ---
 
-## 9. Closure state
+## 9. Current closure state
 
 ```text
-PHASE_5=PASS
+PHASE_5=HOLD
 G5_A_GOOGLE_CLOUD_AUTH=PASS
 G5_A_VERTEX_AI_API=PASS
 G5_A_DEPENDENCY_BINDING=PASS
 G5_B_DIRECT_PYTHON_MCP_HTTP_PROBE=PASS
-G5_C_REAL_GEMINI_ADK_GRAFANA_TRAJECTORY=PASS
-G5_D_REAL_GRAFANA_EVIDENCE=PASS
-G5_E_STRUCTURED_PROPOSAL=PASS
-G5_F_AUTHORITY_BOUNDARY=PASS
-G5_G_REGRESSION=22_PASS
+G5_C_REAL_GEMINI_ADK_GRAFANA_TRAJECTORY=PASS_PREVIOUS_BUILD
+G5_D_REAL_GRAFANA_EVIDENCE=PASS_PREVIOUS_BUILD
+G5_E_STRUCTURED_PROPOSAL=REVALIDATION_REQUIRED
+G5_F_AUTHORITY_BOUNDARY=PASS_PREVIOUS_BUILD
+G5_G_REGRESSION=PENDING_CURRENT_HEAD
+NEXT_GATE=POSTCONDITION_CONTRACT_REGRESSION_THEN_REAL_RUNTIME_RERUN
 ```
 
-Phase 5 is ready for final PR readback and merge decision. No Phase 6 work should begin until the Phase 5 PR is reviewed and the canonical `air` branch is advanced.
+The Phase 5 branch must remain unmerged until the stronger proposal contract is proven by a fresh real runtime readback.
