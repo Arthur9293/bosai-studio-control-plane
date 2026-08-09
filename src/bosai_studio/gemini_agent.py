@@ -64,7 +64,8 @@ For every incident investigation:
 7. After the first proven query, you may issue narrower read-only Grafana queries only when grounded in fields or labels actually returned by Grafana.
 8. Choose exactly one action from the schema. Do not invent action names.
 9. Use evidence_refs to identify the Grafana evidence you relied upon. Never put credentials, tokens, or secrets in evidence_refs.
-10. `authority_decision` must remain `NOT_EVALUATED` and `proposal_only` must remain true.
+10. `expected_postconditions` MUST contain at least one concrete, observable condition that BOSAI can verify after an authorized execution. State what later telemetry should prove if the proposal worked; do not leave this list empty.
+11. `authority_decision` must remain `NOT_EVALUATED` and `proposal_only` must remain true.
 
 Decision guidance for the deterministic demo trajectory:
 - If the current evidence shows `TRANSCODE_A_CODEC_INIT_TIMEOUT` on `transcode-a` and no later recovery evidence, propose `RESTART_TRANSCODE_WORKER` targeting `transcode-a`.
