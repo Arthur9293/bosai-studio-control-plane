@@ -176,7 +176,7 @@ class AuthorityExecutor:
 
         before_version = before.state_version
         try:
-            after, postconditions = self.pipeline.execute_authorized(proposal.action, proposal.target)
+            after, postconditions = self.pipeline._execute_authorized(proposal.action, proposal.target)
         except Exception:
             with self._lock:
                 permit.state = PermitState.FAILED
