@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 5 Gemini Agent Loop Readiness
 
-Status: **PARTIAL — READY_FOR_VERTEX_AI_AUTH_BINDING**  
+Status: **PARTIAL — MCP_TRANSPORT_DIAGNOSTIC_IN_PROGRESS**  
 Issue: **#10 — PHASE 5 — Gemini Agent Loop**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -13,14 +13,17 @@ Working branch: `phase/05-gemini-agent-loop`
 
 Phase 5 is not PASS yet.
 
-The repository now contains the bounded Google ADK/Gemini agent surface required for the first real reasoning loop, but no Vertex AI credential/project binding or real Gemini invocation has yet been read back.
-
-Therefore:
+The repository contains the bounded Google ADK/Gemini agent surface and the Google runtime preflight is proven locally. The direct official Grafana MCP runtime remains proven from Phase 4. The remaining gate is a successful Google ADK MCP session over the local read-only Streamable HTTP sidecar followed by a real Gemini tool trajectory and schema-valid proposal.
 
 ```text
 PHASE_5_CODE_PREPARATION=PASS
-VERTEX_AI_AUTH_PROVEN=false
-REAL_GEMINI_INVOCATION_PROVEN=false
+VERTEX_AI_AUTH_PROVEN=true
+VERTEX_AI_API_ENABLED=true
+ADK_DEPENDENCY_BINDING=PASS
+REGRESSION_TESTS=20_PASS
+DIRECT_GRAFANA_MCP_STDIO=PASS
+LOCAL_GRAFANA_MCP_HTTP_HEALTH=PASS
+ADK_MCP_SESSION=NOT_YET_PROVEN
 REAL_GEMINI_GRAFANA_MCP_TOOL_USE_PROVEN=false
 STRUCTURED_PROPOSAL_RUNTIME_PROVEN=false
 PHASE_5=PARTIAL
@@ -32,35 +35,28 @@ No mocked model response may satisfy the missing runtime gates.
 
 ## 2. Current Google runtime contract
 
-Primary official references:
+Pinned Phase 5 runtime dependencies:
 
-- ADK: `https://adk.dev/`
-- ADK Python quickstart: `https://adk.dev/get-started/python/`
-- ADK MCP tools: `https://adk.dev/tools/mcp-tools/`
-- Vertex AI Gemini quickstart: `https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart`
-- Vertex AI release notes: `https://docs.cloud.google.com/vertex-ai/generative-ai/docs/release-notes`
-- Google ADK PyPI: `https://pypi.org/project/google-adk/`
-
-Pinned Phase 5 runtime dependency:
-
-`google-adk[mcp]==2.5.0`
+- `google-adk[mcp]==2.5.0`
+- `google-auth[aiohttp]>=2.56,<3`
 
 Model target:
 
 `gemini-2.5-flash`
 
-Reason for the model choice:
-
-- Google-hosted Gemini model;
-- generally available on Vertex AI;
-- sufficient reasoning/tool-use capability for the incident investigator;
-- current published retirement date is after the 7 September 2026 hackathon deadline.
-
-Vertex AI mode is mandatory in Phase 5:
+Vertex AI mode is mandatory:
 
 `GOOGLE_GENAI_USE_VERTEXAI=true`
 
-The runtime rejects missing Vertex AI project/location configuration.
+Local operator preflight has proven:
+
+- Google Cloud CLI available;
+- Application Default Credentials available;
+- project `bosai-gemini-xprize` selected;
+- Vertex AI API `aiplatform.googleapis.com` enabled;
+- `GOOGLE_CLOUD_LOCATION=global` configured.
+
+No Google credential JSON or access token is committed.
 
 ---
 
@@ -70,9 +66,13 @@ Gemini receives only one external tool:
 
 `query_loki_logs`
 
-through Google ADK `McpToolset` connected over stdio to:
+through Google ADK `McpToolset` connected to a local read-only Grafana MCP sidecar over Streamable HTTP.
 
-`grafana/mcp-grafana:1.0.0 -t stdio --disable-write`
+Current local MCP endpoint contract:
+
+`http://127.0.0.1:8010/`
+
+The sidecar owns Grafana credentials; the Gemini/ADK runtime configuration does not require or receive the Grafana service-account token.
 
 Explicit tool surface:
 
@@ -89,7 +89,7 @@ Gemini does not receive:
 - restart/reroute mutation tools;
 - Grafana write tools.
 
-This enforces the Phase 5 form of:
+This enforces:
 
 `Intelligence is not authority.`
 
@@ -113,9 +113,9 @@ The envelope requires:
 - `authority_decision=NOT_EVALUATED`;
 - `proposal_only=true`.
 
-Extra fields are rejected.
+Extra fields are rejected. A model output containing `authority_decision=AUTHORIZED` or an invented `permit_id` fails deterministic schema validation.
 
-A model output containing `authority_decision=AUTHORIZED` or an invented `permit_id` fails deterministic schema validation.
+The runner tolerates at most one JSON markdown fence around an otherwise standalone JSON object; surrounding commentary is rejected.
 
 Conversion only creates a `Proposal`; it does not call BOSAI authority evaluation or execution.
 
@@ -131,16 +131,22 @@ Expected runtime trajectory:
 
 ```text
 Gemini / ADK
-  -> query_loki_logs via official Grafana MCP
+  -> local official mcp-grafana over Streamable HTTP
+  -> query_loki_logs
   -> real Loki response
-  -> reason from observed incident evidence
-  -> raw JSON proposal
-  -> deterministic AgentProposalEnvelope validation
+  -> deterministic evidence assertion
+  -> structured recovery proposal
+  -> AgentProposalEnvelope validation
   -> BOSAI Proposal
   -> STOP
 ```
 
-For the current Phase 4 telemetry, the expected first proposal is normally:
+Required real evidence in the MCP response:
+
+- `TRANSCODE_A_CODEC_INIT_TIMEOUT`
+- `bosai-studio-media-pipeline`
+
+Expected first proposal for the current incident evidence:
 
 ```text
 action=RESTART_TRANSCODE_WORKER
@@ -148,41 +154,62 @@ target=transcode-a
 authority_decision=NOT_EVALUATED
 ```
 
-A different proposal is not automatically treated as failure if its reasoning is grounded in real Grafana evidence; it must be reviewed rather than retrofitted to the expected result.
+A different proposal is acceptable only if grounded in the real Grafana evidence and reviewed rather than retrofitted.
 
 ---
 
-## 6. Runtime evidence required
+## 6. Runtime diagnostics completed
+
+### Direct official MCP
+
+The existing direct MCP client succeeds against official `grafana/mcp-grafana:1.0.0` over stdio, including tool discovery for `query_loki_logs`.
+
+### Streamable HTTP sidecar
+
+The sidecar is running read-only with an explicit local host allowlist and health endpoint:
+
+```text
+MCP_HTTP_HEALTH=200
+```
+
+A previous `403 forbidden: host not allowed` was resolved by explicitly allowing only:
+
+- `localhost:8010`
+- `127.0.0.1:8010`
+
+No wildcard host bypass is used.
+
+### ADK Streamable HTTP session
+
+Google ADK 2.5.0 initially attempted mTLS for the local HTTP endpoint. Setting the local development environment variable below removed the mTLS warning:
+
+`GOOGLE_API_USE_CLIENT_CERTIFICATE=false`
+
+The ADK session still terminates before tool discovery, so the current diagnostic gate is now lower-level: prove the same Streamable HTTP endpoint with the Python MCP SDK directly, outside ADK.
+
+A dedicated probe exists at:
+
+`scripts/mcp_http_probe.py`
+
+It must prove initialization and `query_loki_logs` discovery using the same Python MCP dependency installed with ADK.
+
+---
+
+## 7. Runtime evidence still required
 
 Phase 5 closure requires a real runner readback proving:
 
-1. Vertex AI authentication succeeds.
-2. Gemini responds from the configured Google model.
+1. ADK establishes the local MCP session.
+2. Gemini responds from Vertex AI using the configured Google model.
 3. ADK trajectory contains `query_loki_logs`.
 4. No non-allowlisted tool is invoked.
-5. Final Gemini response validates against `AgentProposalEnvelope`.
-6. `authority_decision=NOT_EVALUATED`.
-7. `authority_engine_invoked=false`.
-8. `permit_issued=false`.
-9. `mutation_attempted=false`.
-10. Repository tests remain green after ADK dependency binding.
-
----
-
-## 7. External gate
-
-The repository currently contains no Google Cloud project ID, Application Default Credential, or service-account secret.
-
-Required local/development setup must occur outside Git:
-
-- select/create an admissible Google Cloud project;
-- enable Vertex AI API;
-- configure Application Default Credentials for local smoke testing;
-- export `GOOGLE_CLOUD_PROJECT`;
-- export `GOOGLE_CLOUD_LOCATION=global`;
-- export `GOOGLE_GENAI_USE_VERTEXAI=true`.
-
-No credential JSON or access token may be committed.
+5. The MCP response contains the required BOSAI telemetry evidence.
+6. Final Gemini response validates against `AgentProposalEnvelope`.
+7. `authority_decision=NOT_EVALUATED`.
+8. `authority_engine_invoked=false`.
+9. `permit_issued=false`.
+10. `mutation_attempted=false`.
+11. Full repository regression remains green.
 
 ---
 
@@ -193,10 +220,15 @@ PHASE_5=PARTIAL
 PHASE_5_CODE_PREPARATION=PASS
 PHASE_5_TOOL_BOUNDARY=PASS_BY_CODE_REVIEW
 PHASE_5_STRUCTURED_CONTRACT=PASS_BY_CODE_REVIEW
-REAL_VERTEX_AI=false
-REAL_GEMINI=false
-REAL_ADK_MCP_TRAJECTORY=false
-NEXT_GATE=G5_A_GOOGLE_CLOUD_AUTH_AND_DEPENDENCY_BINDING
+G5_A_GOOGLE_CLOUD_AUTH=PASS
+G5_A_VERTEX_AI_API=PASS
+G5_A_DEPENDENCY_BINDING=PASS
+REGRESSION_TESTS=20_PASS
+DIRECT_GRAFANA_MCP_STDIO=PASS
+LOCAL_GRAFANA_MCP_HTTP_HEALTH=PASS
+DIRECT_PYTHON_MCP_HTTP_PROBE=PENDING
+REAL_GEMINI_GRAFANA_MCP_TOOL_USE=false
+NEXT_GATE=G5_B_DIRECT_PYTHON_MCP_HTTP_PROBE
 ```
 
-The Phase 5 branch must remain unmerged until real Gemini + ADK + Grafana MCP evidence and regression tests exist.
+The Phase 5 branch must remain unmerged until real Gemini + ADK + Grafana MCP evidence and final regression tests exist.
