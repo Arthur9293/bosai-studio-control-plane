@@ -27,6 +27,7 @@ class VerificationResult:
     required_evidence_tokens: tuple[str, ...]
     missing_evidence_tokens: tuple[str, ...]
     proposal_expected_postconditions: tuple[str, ...]
+    evidence_binding_token: str | None
     evidence_digest: str
 
 
@@ -45,12 +46,15 @@ def verify_authorized_execution(
     before: PipelineState,
     after: PipelineState,
     evidence_text: str,
+    *,
+    evidence_binding_token: str | None = None,
 ) -> VerificationResult:
     """Verify a governed side effect from authoritative state plus read-only telemetry evidence.
 
     Gemini prose is preserved as an expectation, but it is not treated as proof. The
     action-specific verification contract below is deterministic and fails closed when
-    required state or telemetry evidence is absent.
+    required state or telemetry evidence is absent. A supplied binding token (Phase 6
+    uses a unique run_id) prevents stale historical telemetry from satisfying the gate.
     """
 
     checks: list[VerificationCheck] = [
@@ -157,6 +161,9 @@ def verify_authorized_execution(
         )
         required_tokens = ()
 
+    if evidence_binding_token:
+        required_tokens = (*required_tokens, evidence_binding_token)
+
     missing = tuple(token for token in required_tokens if token not in evidence_text)
     verified = all(item.passed for item in checks) and not missing
     digest = sha256(evidence_text.encode("utf-8")).hexdigest()
@@ -171,5 +178,6 @@ def verify_authorized_execution(
         required_evidence_tokens=required_tokens,
         missing_evidence_tokens=missing,
         proposal_expected_postconditions=proposal.expected_postconditions,
+        evidence_binding_token=evidence_binding_token,
         evidence_digest=digest,
     )
