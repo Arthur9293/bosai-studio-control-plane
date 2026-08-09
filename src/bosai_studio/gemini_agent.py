@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool import McpToolset
@@ -16,7 +17,20 @@ GRAFANA_TOOL_ALLOWLIST = ("query_loki_logs",)
 MUTATION_TOOLS_EXPOSED: tuple[str, ...] = ()
 
 
-def _grafana_toolset() -> McpToolset:
+def _stdio_environment(config: GeminiRuntimeConfig) -> dict[str, str]:
+    """Build the smallest practical environment for the Docker MCP subprocess."""
+    env = {
+        "GRAFANA_URL": config.grafana_url,
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": config.grafana_service_account_token,
+    }
+    for name in ("PATH", "HOME", "DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"):
+        value = os.getenv(name)
+        if value:
+            env[name] = value
+    return env
+
+
+def _grafana_toolset(config: GeminiRuntimeConfig) -> McpToolset:
     return McpToolset(
         connection_params=StdioConnectionParams(
             server_params=StdioServerParameters(
@@ -34,6 +48,7 @@ def _grafana_toolset() -> McpToolset:
                     "stdio",
                     "--disable-write",
                 ],
+                env=_stdio_environment(config),
             ),
         ),
         tool_filter=list(GRAFANA_TOOL_ALLOWLIST),
@@ -72,5 +87,5 @@ Your FINAL RESPONSE must be raw JSON only, with no markdown fences and no commen
         model=config.model,
         description="Read-only Gemini incident investigator that proposes but cannot authorize or execute.",
         instruction=instruction,
-        tools=[_grafana_toolset()],
+        tools=[_grafana_toolset(config)],
     )
