@@ -112,6 +112,27 @@ class GovernedExecutionLoopTests(unittest.TestCase):
         self.assertIn("POSTCONDITION_FAILED", [event.event_type for event in loop.authority.audit.events])
         self.assertTrue(loop.authority.audit.verify())
 
+    def test_verification_rejects_stale_matching_telemetry_without_current_run_id(self) -> None:
+        loop = make_loop()
+        proposal = restart_proposal("phase6-stale-evidence")
+        before = loop.authority.pipeline.snapshot()
+        decision = loop.submit(proposal, now=NOW)
+        receipt = loop.execute_authorized(proposal, decision, now=NOW)
+        after = loop.authority.pipeline.snapshot()
+
+        verification = loop.verify(
+            proposal,
+            receipt,
+            before,
+            after,
+            RESTART_EVIDENCE,
+            evidence_binding_token="phase6-current-run",
+        )
+
+        self.assertFalse(verification.verified)
+        self.assertIn("phase6-current-run", verification.missing_evidence_tokens)
+        self.assertEqual(verification.evidence_binding_token, "phase6-current-run")
+
     def test_qc_bypass_is_denied_by_trajectory_invariant_without_mutation_or_permit(self) -> None:
         loop = make_loop()
         before = loop.authority.pipeline.snapshot()
