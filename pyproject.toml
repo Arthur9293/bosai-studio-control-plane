@@ -4,10 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bosai-studio-control-plane"
-version = "0.2.0"
+version = "0.3.0"
 description = "Governed autonomous operations for AI-powered media production."
 requires-python = ">=3.11"
 dependencies = [
+  "google-adk[mcp]==2.5.0",
+  "pydantic>=2.11,<3",
   "opentelemetry-sdk>=1.42,<2",
   "opentelemetry-exporter-otlp-proto-http>=1.42,<2",
 ]
