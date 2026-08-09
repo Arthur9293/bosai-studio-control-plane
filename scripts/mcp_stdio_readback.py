@@ -62,7 +62,7 @@ class MCPStdioClient:
             {
                 "protocolVersion": PROTOCOL_VERSION,
                 "capabilities": {},
-                "clientInfo": {"name": "bosai-studio-grafana-readback", "version": "0.1.0"},
+                "clientInfo": {"name": "bosai-studio-grafana-readback", "version": "0.2.0"},
             },
         )
         self.notify("notifications/initialized")
@@ -86,6 +86,13 @@ def sanitized_env() -> dict[str, str]:
     return os.environ.copy()
 
 
+def find_tool(tools_result: dict[str, Any], name: str) -> dict[str, Any]:
+    for tool in tools_result.get("tools", []):
+        if tool.get("name") == name:
+            return tool
+    raise RuntimeError(f"MCP tool not advertised by server: {name}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Minimal read-only MCP stdio smoke client for official mcp-grafana.")
     parser.add_argument(
@@ -93,9 +100,16 @@ def main() -> None:
         default=os.getenv("MCP_GRAFANA_COMMAND", "mcp-grafana -t stdio --disable-write"),
         help="Command used to launch official mcp-grafana.",
     )
+    parser.add_argument(
+        "--describe-tool",
+        help="Return the advertised MCP tool definition/input schema without invoking it.",
+    )
     parser.add_argument("--tool", help="Optional MCP tool to invoke after initialization.")
     parser.add_argument("--arguments-json", default="{}", help="JSON object passed to --tool.")
     args = parser.parse_args()
+
+    if args.describe_tool and args.tool:
+        parser.error("use either --describe-tool or --tool in one invocation, not both")
 
     client = MCPStdioClient(shlex.split(args.server_command), sanitized_env())
     try:
@@ -106,13 +120,17 @@ def main() -> None:
             "server_info": init.get("serverInfo"),
             "tool_names": [tool.get("name") for tool in tools.get("tools", [])],
         }
+        if args.describe_tool:
+            output["tool_definition"] = find_tool(tools, args.describe_tool)
         if args.tool:
+            tool_definition = find_tool(tools, args.tool)
             arguments = json.loads(args.arguments_json)
             if not isinstance(arguments, dict):
                 raise ValueError("--arguments-json must decode to a JSON object")
             started = time.time()
             result = client.request("tools/call", {"name": args.tool, "arguments": arguments})
             output["tool"] = args.tool
+            output["tool_input_schema"] = tool_definition.get("inputSchema")
             output["duration_ms"] = round((time.time() - started) * 1000, 1)
             output["result"] = result
         print(json.dumps(output, indent=2, sort_keys=True, default=str))
