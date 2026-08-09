@@ -28,6 +28,7 @@ class TelemetryEvent:
     sla_at_risk: bool
     incident_type: str = "TRANSCODE_A_CODEC_INIT_TIMEOUT"
     transcode_latency_ms: float | None = None
+    run_id: str | None = None
 
 
 class PipelineTelemetry:
@@ -105,7 +106,7 @@ class PipelineTelemetry:
         )
 
     def record(self, event: TelemetryEvent) -> None:
-        attributes = {
+        attributes: dict[str, str | bool] = {
             "bosai.event": event.event,
             "bosai.pipeline.stage": event.stage,
             "bosai.worker": event.worker,
@@ -113,6 +114,9 @@ class PipelineTelemetry:
             "bosai.incident.type": event.incident_type,
             "bosai.synthetic": True,
         }
+        if event.run_id:
+            attributes["bosai.run_id"] = event.run_id
+
         self.pipeline_events.add(1, attributes=attributes)
         if event.transcode_latency_ms is not None:
             self.transcode_latency.record(event.transcode_latency_ms, attributes=attributes)
@@ -122,11 +126,13 @@ class PipelineTelemetry:
                 span.set_attribute(key, value)
             if event.transcode_latency_ms is not None:
                 span.set_attribute("bosai.transcode.latency_ms", event.transcode_latency_ms)
+
+            run_fragment = f" run_id={event.run_id}" if event.run_id else ""
             self.logger.emit(
                 severity_text="INFO",
                 body=(
                     f"{event.event} stage={event.stage} worker={event.worker} "
-                    f"sla_at_risk={str(event.sla_at_risk).lower()} synthetic=true"
+                    f"sla_at_risk={str(event.sla_at_risk).lower()} synthetic=true{run_fragment}"
                 ),
                 attributes=attributes,
             )
