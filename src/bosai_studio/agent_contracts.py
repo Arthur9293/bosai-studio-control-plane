@@ -25,15 +25,15 @@ class AgentProposalEnvelope(BaseModel):
     target: str = Field(min_length=1)
     reason: str = Field(min_length=1)
     evidence_refs: list[str] = Field(min_length=1)
-    expected_postconditions: list[str] = Field(default_factory=list)
+    expected_postconditions: list[str] = Field(min_length=1)
     authority_decision: AuthorityState = "NOT_EVALUATED"
     proposal_only: Literal[True] = True
 
-    @field_validator("evidence_refs")
+    @field_validator("evidence_refs", "expected_postconditions")
     @classmethod
-    def evidence_refs_must_be_nonempty_strings(cls, value: list[str]) -> list[str]:
+    def list_fields_must_be_nonempty_strings(cls, value: list[str]) -> list[str]:
         if any(not item.strip() for item in value):
-            raise ValueError("evidence_refs must contain non-empty strings")
+            raise ValueError("list fields must contain non-empty strings")
         return value
 
     def to_domain_proposal(self) -> Proposal:
