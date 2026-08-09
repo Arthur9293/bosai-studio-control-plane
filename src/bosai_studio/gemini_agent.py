@@ -13,6 +13,10 @@ from .gemini_config import GeminiRuntimeConfig
 
 GRAFANA_TOOL_ALLOWLIST = ("query_loki_logs",)
 MUTATION_TOOLS_EXPOSED: tuple[str, ...] = ()
+PROVEN_INCIDENT_LOGQL = '{service_name="bosai-studio-media-pipeline"} |= "TRANSCODE_A_CODEC_INIT_TIMEOUT"'
+PROVEN_INCIDENT_START = "now-24h"
+PROVEN_INCIDENT_LIMIT = 20
+PROVEN_INCIDENT_DIRECTION = "backward"
 
 
 def _same_origin(url: str) -> str:
@@ -49,10 +53,18 @@ For every incident investigation:
 1. Use the Grafana MCP tool `query_loki_logs` before producing a proposal.
 2. Query datasourceUid `{config.loki_datasource_uid}`.
 3. Ground the proposal only in real Grafana evidence returned by the tool.
-4. For incident `FINAL_TRAILER_DELIVERY_SLA_AT_RISK`, inspect service `bosai-studio-media-pipeline` and the synthetic transcode incident evidence.
-5. Choose exactly one action from the schema. Do not invent action names.
-6. Use evidence_refs to identify the Grafana evidence you relied upon. Never put credentials, tokens, or secrets in evidence_refs.
-7. `authority_decision` must remain `NOT_EVALUATED` and `proposal_only` must remain true.
+4. For incident `FINAL_TRAILER_DELIVERY_SLA_AT_RISK`, your FIRST Grafana read MUST use exactly these proven Phase 4 retrieval arguments:
+   - datasourceUid: `{config.loki_datasource_uid}`
+   - logql: `{PROVEN_INCIDENT_LOGQL}`
+   - startRfc3339: `{PROVEN_INCIDENT_START}`
+   - limit: `{PROVEN_INCIDENT_LIMIT}`
+   - direction: `{PROVEN_INCIDENT_DIRECTION}`
+5. The proven Loki stream label is `service_name`. Do NOT replace it with `service`.
+6. Do NOT put `incident_id` in the Loki stream selector unless a prior Grafana response explicitly proves it is a stream label. For this first read, identify the incident from the returned event content instead.
+7. After the first proven query, you may issue narrower read-only Grafana queries only when grounded in fields or labels actually returned by Grafana.
+8. Choose exactly one action from the schema. Do not invent action names.
+9. Use evidence_refs to identify the Grafana evidence you relied upon. Never put credentials, tokens, or secrets in evidence_refs.
+10. `authority_decision` must remain `NOT_EVALUATED` and `proposal_only` must remain true.
 
 Decision guidance for the deterministic demo trajectory:
 - If the current evidence shows `TRANSCODE_A_CODEC_INIT_TIMEOUT` on `transcode-a` and no later recovery evidence, propose `RESTART_TRANSCODE_WORKER` targeting `transcode-a`.
