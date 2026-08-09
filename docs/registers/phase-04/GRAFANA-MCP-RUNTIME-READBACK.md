@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 4 Grafana MCP Runtime Readback
 
-Status: **PASS — EXTERNAL RUNTIME EVIDENCE CAPTURED**  
+Status: **PASS — EXTERNAL RUNTIME + REGRESSION VERIFIED**  
 Issue: **#8 — PHASE 4 — Grafana MCP Integration**  
 PR: **#9 — feat: prepare Phase 4 Grafana MCP integration**  
 Branch: `phase/04-grafana-mcp-integration`
@@ -158,7 +158,29 @@ This satisfies the core hackathon track proof that Grafana is actively used at r
 
 ---
 
-## 6. Phase 4 external gates
+## 6. Regression readback
+
+After the real Grafana OTLP and MCP gates passed, the complete repository test suite was rerun on the Phase 4 branch:
+
+`python -m unittest discover -s tests -v`
+
+Observed terminal readback:
+
+- `Ran 12 tests in 0.007s`
+- `OK`
+
+This includes the original Phase 3 governed-execution controls and the Phase 4 telemetry contract tests.
+
+Therefore:
+
+- `PHASE_3_REGRESSION=PASS`
+- `PHASE_4_TELEMETRY_TESTS=PASS`
+- `TOTAL_TESTS=12`
+- `TEST_SUITE_STATUS=OK`
+
+---
+
+## 7. Phase 4 closure state
 
 ```text
 G4_A_REAL_GRAFANA_OTLP=PASS
@@ -169,18 +191,8 @@ OFFICIAL_GRAFANA_MCP=true
 MCP_WRITE_TOOLS_DISABLED=true
 SERVICE_ACCOUNT_ROLE=Viewer
 PERMISSION_ESCALATION_REQUIRED=false
+PHASE_3_REGRESSION=PASS
+TOTAL_TESTS=12
+PHASE_4_MERGE_GATE=PASS
+PHASE_4=PASS
 ```
-
-## 7. Remaining closure gate
-
-Before PR #9 may be merged, rerun the repository test suite on the Phase 4 branch to prove that the Phase 3 governed-execution core remains green after OpenTelemetry dependency binding.
-
-Required final check:
-
-`python -m unittest discover -s tests -v`
-
-Until that regression readback is captured:
-
-`PHASE_4_EXTERNAL_RUNTIME=PASS`
-
-`PHASE_4_MERGE_GATE=PASS_PENDING_REGRESSION_TEST`
