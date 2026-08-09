@@ -8,12 +8,8 @@ from pydantic import ValidationError
 
 from bosai_studio.agent_contracts import AgentProposalEnvelope
 from bosai_studio.contracts import Action
-from bosai_studio.gemini_agent import (
-    GRAFANA_TOOL_ALLOWLIST,
-    MUTATION_TOOLS_EXPOSED,
-    _stdio_environment,
-)
-from bosai_studio.gemini_config import GeminiRuntimeConfig, load_gemini_runtime_config
+from bosai_studio.gemini_agent import GRAFANA_TOOL_ALLOWLIST, MUTATION_TOOLS_EXPOSED
+from bosai_studio.gemini_config import load_gemini_runtime_config
 from scripts.gemini_agent_readback import _extract_json_payload
 
 
@@ -78,7 +74,7 @@ class GeminiRuntimeConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "GOOGLE_GENAI_USE_VERTEXAI=true"):
                 load_gemini_runtime_config()
 
-    def test_required_runtime_boundaries_load_without_secrets_in_object_repr_assertions(self) -> None:
+    def test_runtime_config_uses_local_mcp_without_grafana_secrets(self) -> None:
         env = {
             "GOOGLE_GENAI_USE_VERTEXAI": "true",
             "GOOGLE_CLOUD_PROJECT": "bosai-hackathon-project",
@@ -88,26 +84,24 @@ class GeminiRuntimeConfigTests(unittest.TestCase):
         }
         with patch.dict(os.environ, env, clear=True):
             config = load_gemini_runtime_config()
+
         self.assertEqual(config.model, "gemini-2.5-flash")
         self.assertEqual(config.loki_datasource_uid, "grafanacloud-logs")
+        self.assertEqual(config.grafana_mcp_url, "http://127.0.0.1:8010/")
+        self.assertFalse(hasattr(config, "grafana_service_account_token"))
+        self.assertNotIn("secret-value", repr(config))
 
-    def test_mcp_subprocess_receives_required_grafana_environment(self) -> None:
-        config = GeminiRuntimeConfig(
-            google_cloud_project="bosai-hackathon-project",
-            google_cloud_location="global",
-            model="gemini-2.5-flash",
-            grafana_url="https://example.grafana.net",
-            grafana_service_account_token="secret-value",
-            loki_datasource_uid="grafanacloud-logs",
-        )
-        with patch.dict(os.environ, {"PATH": "/usr/bin", "HOME": "/tmp/home"}, clear=True):
-            child_env = _stdio_environment(config)
+    def test_local_mcp_url_can_be_overridden_without_credentials(self) -> None:
+        env = {
+            "GOOGLE_GENAI_USE_VERTEXAI": "true",
+            "GOOGLE_CLOUD_PROJECT": "bosai-hackathon-project",
+            "GOOGLE_CLOUD_LOCATION": "global",
+            "BOSAI_GRAFANA_MCP_URL": "http://localhost:8123/",
+        }
+        with patch.dict(os.environ, env, clear=True):
+            config = load_gemini_runtime_config()
 
-        self.assertEqual(child_env["GRAFANA_URL"], "https://example.grafana.net")
-        self.assertEqual(child_env["GRAFANA_SERVICE_ACCOUNT_TOKEN"], "secret-value")
-        self.assertEqual(child_env["PATH"], "/usr/bin")
-        self.assertEqual(child_env["HOME"], "/tmp/home")
-        self.assertNotIn("GOOGLE_CLOUD_PROJECT", child_env)
+        self.assertEqual(config.grafana_mcp_url, "http://localhost:8123/")
 
 
 if __name__ == "__main__":
