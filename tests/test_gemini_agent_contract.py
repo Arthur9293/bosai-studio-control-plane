@@ -55,6 +55,17 @@ class GeminiProposalContractTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             AgentProposalEnvelope.model_validate(invalid)
 
+    def test_model_must_provide_verifiable_postconditions(self) -> None:
+        missing = dict(VALID_OUTPUT)
+        missing["expected_postconditions"] = []
+        with self.assertRaises(ValidationError):
+            AgentProposalEnvelope.model_validate(missing)
+
+        blank = dict(VALID_OUTPUT)
+        blank["expected_postconditions"] = ["   "]
+        with self.assertRaises(ValidationError):
+            AgentProposalEnvelope.model_validate(blank)
+
     def test_agent_tool_surface_is_read_only_and_minimal(self) -> None:
         self.assertEqual(GRAFANA_TOOL_ALLOWLIST, ("query_loki_logs",))
         self.assertEqual(MUTATION_TOOLS_EXPOSED, ())
