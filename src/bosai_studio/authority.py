@@ -43,6 +43,12 @@ class AuthorityExecutor:
     def _now(now: datetime | None) -> datetime:
         return now or datetime.now(timezone.utc)
 
+    def permit_state(self, permit_id: str) -> PermitState | None:
+        """Read-only permit lifecycle view for proof/readback code."""
+        with self._lock:
+            permit = self._permits.get(permit_id)
+            return permit.state if permit is not None else None
+
     def _deny(
         self,
         proposal: Proposal,
@@ -57,7 +63,7 @@ class AuthorityExecutor:
             policy_version=POLICY_VERSION,
             violated_invariant=violated_invariant,
         )
-        self.audit.append("AUTHORITY_DECISION", decision.__dict__)
+        self.audit.append("AUTHORITY_DENIED", decision.__dict__)
         return decision
 
     def evaluate(self, proposal: Proposal, *, now: datetime | None = None) -> AuthorityDecision:
@@ -103,7 +109,7 @@ class AuthorityExecutor:
             policy_version=POLICY_VERSION,
             permit_id=permit_id,
         )
-        self.audit.append("AUTHORITY_DECISION", decision.__dict__)
+        self.audit.append("AUTHORITY_GRANTED", decision.__dict__)
         return decision
 
     @staticmethod
@@ -174,12 +180,39 @@ class AuthorityExecutor:
             # Atomic local analogue of future Firestore permit consumption.
             permit.state = PermitState.CONSUMED_PENDING
 
+        self.audit.append(
+            "PERMIT_CONSUMED",
+            {
+                "permit_id": permit_id,
+                "proposal_id": proposal.proposal_id,
+                "incident_id": proposal.incident_id,
+                "bound_state_version": before.state_version,
+            },
+        )
+        self.audit.append(
+            "EXECUTION_STARTED",
+            {
+                "permit_id": permit_id,
+                "proposal_id": proposal.proposal_id,
+                "action": proposal.action.value,
+                "target": proposal.target,
+            },
+        )
+
         before_version = before.state_version
         try:
             after, postconditions = self.pipeline._execute_authorized(proposal.action, proposal.target)
-        except Exception:
+        except Exception as exc:
             with self._lock:
                 permit.state = PermitState.FAILED
+            self.audit.append(
+                "EXECUTION_FAILED",
+                {
+                    "permit_id": permit_id,
+                    "proposal_id": proposal.proposal_id,
+                    "error_type": type(exc).__name__,
+                },
+            )
             raise
 
         with self._lock:
@@ -194,7 +227,7 @@ class AuthorityExecutor:
             state_version_after=after.state_version,
             postconditions=postconditions,
         )
-        self.audit.append("EXECUTION_RECEIPT", receipt.__dict__)
+        self.audit.append("EXECUTION_SUCCEEDED", receipt.__dict__)
         return receipt
 
     def _execution_denial(
@@ -213,5 +246,5 @@ class AuthorityExecutor:
             state_version_before=state_version,
             state_version_after=state_version,
         )
-        self.audit.append("EXECUTION_DENIAL", receipt.__dict__)
+        self.audit.append("EXECUTION_DENIED", receipt.__dict__)
         return receipt
