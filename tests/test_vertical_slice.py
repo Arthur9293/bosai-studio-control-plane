@@ -87,6 +87,22 @@ class VerticalSliceTests(unittest.TestCase):
         self.assertTrue(executor.audit.verify())
         self.assertGreaterEqual(len(executor.audit.events), 3)
 
+    def test_execution_without_permit_fails_closed(self) -> None:
+        executor = make_executor()
+        p = proposal("p-no-permit", Action.RESTART_TRANSCODE_WORKER, "transcode-a")
+        receipt = executor.execute(p, "missing-permit", now=NOW)
+        self.assertEqual(receipt.decision, Decision.DENIED)
+        self.assertEqual(receipt.reason_code, "PERMIT_NOT_FOUND")
+        self.assertEqual(executor.pipeline.snapshot().state_version, 1)
+
+    def test_audit_chain_detects_payload_tampering(self) -> None:
+        executor = make_executor()
+        p = proposal("p-audit", Action.RESTART_TRANSCODE_WORKER, "transcode-a")
+        executor.evaluate(p, now=NOW)
+        self.assertTrue(executor.audit.verify())
+        executor.audit.events[0].payload["reason_code"] = "TAMPERED"
+        self.assertFalse(executor.audit.verify())
+
 
 if __name__ == "__main__":
     unittest.main()
