@@ -6,7 +6,7 @@ import os
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_GRAFANA_LOKI_DATASOURCE_UID = "grafanacloud-logs"
-DEFAULT_GRAFANA_MCP_URL = "http://127.0.0.1:8010/"
+DEFAULT_GRAFANA_MCP_URL = "http://127.0.0.1:8010/mcp"
 
 
 @dataclass(frozen=True)
