@@ -16,6 +16,8 @@ from bosai_studio.gemini_config import load_gemini_runtime_config
 APP_NAME = "bosai_studio_phase5"
 USER_ID = "hackathon_operator"
 SESSION_ID = "phase5_real_gemini_smoke"
+TARGET_EVENT = "TRANSCODE_A_CODEC_INIT_TIMEOUT"
+TARGET_SERVICE = "bosai-studio-media-pipeline"
 
 
 def _jsonable(value: Any) -> Any:
@@ -28,6 +30,38 @@ def _jsonable(value: Any) -> Any:
     if hasattr(value, "model_dump"):
         return _jsonable(value.model_dump())
     return str(value)
+
+
+def _extract_json_payload(text: str) -> tuple[str, bool]:
+    """Accept raw JSON or one markdown JSON fence; reject surrounding commentary."""
+    stripped = text.strip()
+    fenced = False
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        if len(lines) < 3 or lines[-1].strip() != "```":
+            raise RuntimeError("Gemini returned an incomplete markdown code fence")
+        opener = lines[0].strip().lower()
+        if opener not in {"```", "```json"}:
+            raise RuntimeError(f"Gemini returned unsupported code fence: {lines[0].strip()}")
+        stripped = "\n".join(lines[1:-1]).strip()
+        fenced = True
+
+    if not (stripped.startswith("{") and stripped.endswith("}")):
+        raise RuntimeError("Gemini final response is not a standalone JSON object")
+    return stripped, fenced
+
+
+def _assert_real_grafana_evidence(tool_responses: list[dict[str, Any]]) -> None:
+    required = [item for item in tool_responses if item.get("name") == "query_loki_logs"]
+    if not required:
+        raise RuntimeError("No query_loki_logs tool response was observed")
+
+    evidence_text = json.dumps(required, sort_keys=True, default=str)
+    missing = [value for value in (TARGET_EVENT, TARGET_SERVICE) if value not in evidence_text]
+    if missing:
+        raise RuntimeError(
+            "Grafana MCP response did not contain required BOSAI evidence: " + ", ".join(missing)
+        )
 
 
 async def run_phase5_smoke() -> dict[str, Any]:
@@ -65,7 +99,7 @@ async def run_phase5_smoke() -> dict[str, Any]:
                 tool_responses.append(
                     {
                         "name": getattr(function_response, "name", None),
-                        "response_observed": True,
+                        "response": _jsonable(getattr(function_response, "response", None)),
                     }
                 )
 
@@ -79,10 +113,14 @@ async def run_phase5_smoke() -> dict[str, Any]:
         raise RuntimeError(f"Gemini did not use required Grafana MCP tool; observed={advertised_calls}")
     if any(name not in GRAFANA_TOOL_ALLOWLIST for name in advertised_calls):
         raise RuntimeError(f"Gemini invoked a tool outside the Phase 5 allowlist: {advertised_calls}")
+
+    _assert_real_grafana_evidence(tool_responses)
+
     if not final_text:
         raise RuntimeError("Gemini produced no final structured proposal")
 
-    envelope = AgentProposalEnvelope.model_validate_json(final_text)
+    json_payload, markdown_fence_stripped = _extract_json_payload(final_text)
+    envelope = AgentProposalEnvelope.model_validate_json(json_payload)
     domain_proposal = envelope.to_domain_proposal()
 
     return {
@@ -90,6 +128,7 @@ async def run_phase5_smoke() -> dict[str, Any]:
         "model": config.model,
         "vertex_ai": True,
         "grafana_mcp_required_tool_observed": True,
+        "grafana_mcp_evidence_verified": True,
         "tool_calls": tool_calls,
         "tool_responses": tool_responses,
         "proposal": envelope.model_dump(mode="json"),
@@ -102,6 +141,7 @@ async def run_phase5_smoke() -> dict[str, Any]:
             "evidence_refs": list(domain_proposal.evidence_refs),
             "expected_postconditions": list(domain_proposal.expected_postconditions),
         },
+        "final_response_markdown_fence_stripped": markdown_fence_stripped,
         "authority_engine_invoked": False,
         "permit_issued": False,
         "mutation_attempted": False,
