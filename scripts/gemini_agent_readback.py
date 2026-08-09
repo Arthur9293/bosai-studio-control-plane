@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from typing import Any
 
 from google.adk.runners import Runner
@@ -49,6 +50,28 @@ def _extract_json_payload(text: str) -> tuple[str, bool]:
     if not (stripped.startswith("{") and stripped.endswith("}")):
         raise RuntimeError("Gemini final response is not a standalone JSON object")
     return stripped, fenced
+
+
+def _tool_trajectory_diagnostic(
+    tool_calls: list[dict[str, Any]], tool_responses: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Return a bounded, secret-free readback of the MCP trajectory for debugging."""
+    summaries: list[dict[str, Any]] = []
+    for item in tool_responses:
+        response_text = json.dumps(item.get("response"), sort_keys=True, default=str)
+        summaries.append(
+            {
+                "name": item.get("name"),
+                "contains_target_event": TARGET_EVENT in response_text,
+                "contains_target_service": TARGET_SERVICE in response_text,
+                "response_chars": len(response_text),
+                "response_preview": response_text[:1600],
+            }
+        )
+    return {
+        "tool_calls": tool_calls,
+        "tool_response_summaries": summaries,
+    }
 
 
 def _assert_real_grafana_evidence(tool_responses: list[dict[str, Any]]) -> None:
@@ -113,6 +136,12 @@ async def run_phase5_smoke() -> dict[str, Any]:
         raise RuntimeError(f"Gemini did not use required Grafana MCP tool; observed={advertised_calls}")
     if any(name not in GRAFANA_TOOL_ALLOWLIST for name in advertised_calls):
         raise RuntimeError(f"Gemini invoked a tool outside the Phase 5 allowlist: {advertised_calls}")
+
+    print(
+        "PHASE5_TOOL_DIAGNOSTIC="
+        + json.dumps(_tool_trajectory_diagnostic(tool_calls, tool_responses), sort_keys=True, default=str),
+        file=sys.stderr,
+    )
 
     _assert_real_grafana_evidence(tool_responses)
 
