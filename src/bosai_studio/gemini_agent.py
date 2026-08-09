@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from urllib.parse import urlsplit
 
 from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool import McpToolset
@@ -14,11 +15,20 @@ GRAFANA_TOOL_ALLOWLIST = ("query_loki_logs",)
 MUTATION_TOOLS_EXPOSED: tuple[str, ...] = ()
 
 
+def _same_origin(url: str) -> str:
+    """Derive the exact same-origin value required by the local MCP server."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise RuntimeError(f"invalid Grafana MCP URL: {url}")
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
 def _grafana_toolset(config: GeminiRuntimeConfig) -> McpToolset:
     """Connect ADK only to the local read-only Grafana MCP HTTP endpoint."""
     return McpToolset(
         connection_params=StreamableHTTPConnectionParams(
             url=config.grafana_mcp_url,
+            headers={"Origin": _same_origin(config.grafana_mcp_url)},
             timeout=30,
             sse_read_timeout=60,
         ),
