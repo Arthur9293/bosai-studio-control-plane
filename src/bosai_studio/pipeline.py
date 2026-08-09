@@ -37,7 +37,8 @@ class MediaPipelineSim:
         self._state = replace(self._state, **changes)
         return self._state
 
-    def execute_authorized(self, action: Action, target: str) -> tuple[PipelineState, tuple[str, ...]]:
+    def _execute_authorized(self, action: Action, target: str) -> tuple[PipelineState, tuple[str, ...]]:
+        """Internal mutation primitive; AuthorityExecutor is the supported execution API."""
         if action is Action.RESTART_TRANSCODE_WORKER:
             if target != "transcode-a":
                 raise ValueError("restart target is not supported by the deterministic demo")
