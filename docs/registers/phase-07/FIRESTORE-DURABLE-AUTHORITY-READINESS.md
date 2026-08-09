@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 7 Firestore Durable Authority Readiness
 
-Status: **PREPARED — LOCAL REGRESSION AND REAL FIRESTORE PROOF PENDING**  
+Status: **PASS — REAL FIRESTORE DURABLE AUTHORITY PROVEN**  
 Issue: **#14 — PHASE 7 — Durable Authority State & Atomic Firestore Permits**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -9,11 +9,13 @@ Working branch: `phase/07-firestore-durable-authority`
 
 ---
 
-## 1. Phase objective
+## 1. Phase decision
 
-Phase 7 replaces the Phase 6 in-memory authority-state analogue with a bounded durable state contract backed by Cloud Firestore.
+Phase 7 is **PASS**.
 
-The control-plane thesis remains unchanged:
+The Phase 6 in-memory authority-state analogue has been replaced by a bounded durable state contract backed by real Cloud Firestore while preserving the BOSAI trust boundary.
+
+Canonical path remains:
 
 ```text
 OBSERVE
@@ -25,7 +27,20 @@ OBSERVE
 → PROVE
 ```
 
-Phase 7 changes only the durability and atomicity of the BOSAI authority layer. Gemini still has no permit, execution, policy-write, or pipeline-mutation capability.
+Observed closure state:
+
+```text
+PHASE_7_LOCAL_REGRESSION=37_PASS
+PHASE_7_FIRESTORE_API_DATABASE=PASS
+PHASE_7_REAL_FIRESTORE_TRANSACTION=PASS
+PHASE_7_DURABLE_AUTHORIZED_EXECUTION=PASS
+PHASE_7_FRESH_PROCESS_DURABLE_REPLAY=PASS
+PHASE_7_REAL_STATE_DRIFT=PASS
+PHASE_7_REAL_EXPIRY=PASS
+PHASE_7_QC_DENIAL_ZERO_PERMIT=PASS
+PHASE_7_DURABLE_AUDIT=PASS
+PHASE_7=PASS
+```
 
 ---
 
@@ -37,13 +52,42 @@ Python dependency:
 
 The package is pinned rather than using a moving alias.
 
+Observed install on the operator Mac included:
+
+```text
+google-cloud-firestore-2.28.0
+google-api-core-2.34.0
+google-cloud-core-2.6.1
+grpcio-1.83.0
+grpcio-status-1.83.0
+proto-plus-1.28.3
+```
+
 Phase 7 targets the default Cloud Firestore database in `GOOGLE_CLOUD_PROJECT` through Application Default Credentials.
 
 No credential value is accepted as an application argument or committed to Git.
 
 ---
 
-## 3. Logical durable model
+## 3. Explicit Firestore project proof
+
+Real Firestore client access was explicitly confirmed against:
+
+`GOOGLE_CLOUD_PROJECT=bosai-gemini-xprize`
+
+Observed preflight:
+
+```text
+PROJECT=bosai-gemini-xprize
+FIRESTORE_CLIENT=created
+FIRESTORE_LIST_COLLECTIONS=ok count=0
+```
+
+The first implicit preflight had `PROJECT=None`, so it was not accepted as proof. The explicit project readback above is the accepted one.
+
+---
+
+## 4. Logical durable model
 
 Each real validation run is isolated below:
 
@@ -64,9 +108,13 @@ meta/audit
 
 The run namespace prevents validation evidence from colliding with earlier runs while preserving the Architecture V1 logical model.
 
+Observed real run namespace:
+
+`phase7-96757e5b5bde`
+
 ---
 
-## 4. Permit transaction boundary
+## 5. Permit transaction boundary
 
 The critical Phase 7 ordering is:
 
@@ -89,81 +137,140 @@ There is deliberately no pipeline/network invocation in the transaction callback
 
 A transaction retry can therefore repeat only Firestore reads/writes, not the external mutation.
 
----
+The real runtime proof packet emitted:
 
-## 5. Durable permit states
-
-Phase 7 durable permit lifecycle:
-
-```text
-ISSUED
-→ CONSUMED_PENDING
-→ EXECUTED
-```
-
-Failure terminals:
-
-```text
-CONSUMED_PENDING → EXECUTION_FAILED
-ISSUED → EXPIRED
-ISSUED → INVALIDATED
-```
-
-Replay against any non-`ISSUED` state fails closed as `DENIED_REPLAY`.
-
-A crash after `CONSUMED_PENDING` does not automatically repeat the side effect. A new proposal and authorization are required.
+`transaction_side_effect_boundary=consume transaction commits before pipeline mutation`
 
 ---
 
-## 6. Durable trajectory binding
+## 6. Durable authorized path
 
-Each permit contains:
+Observed authorized path:
 
 ```text
-proposal_id
-incident_id
-action
-target
-policy_version
-bound_state_version
-expires_at
-status
+decision=AUTHORIZED
+issued_state=ISSUED
+execution_decision=AUTHORIZED
+state_version_before=1
+state_version_after=2
+terminal_state=EXECUTED
+mutation_calls=1
+fresh_client_executor_used=true
 ```
 
-The Firestore consumption transaction reads the current durable incident document and compares its `state_version` with `bound_state_version`.
+Interpretation:
 
-A mismatch returns:
+- the proposal/decision/incident/policy/permit state was durably persisted;
+- a fresh Firestore-backed executor consumed the permit;
+- the permit reached terminal `EXECUTED` state;
+- exactly one mutation occurred;
+- execution followed durable transaction consumption rather than in-memory permit state.
+
+---
+
+## 7. Durable fresh-process replay denial
+
+A separate Python process and fresh Firestore client loaded the same permit and attempted replay.
+
+Observed:
+
+```text
+fresh_process=true
+decision=DENIED_REPLAY
+reason_code=PERMIT_ALREADY_CONSUMED
+permit_state=EXECUTED
+mutation_calls=0
+audit_chain_valid=true
+```
+
+This proves replay denial is based on durable Firestore state, not process-local memory.
+
+---
+
+## 8. Durable trajectory drift proof
+
+A separate real Firestore run proved state-drift fail-closed behavior.
+
+Observed:
 
 ```text
 decision=REEVALUATION_REQUIRED
 reason_code=TRAJECTORY_STATE_CHANGED
 permit_state=INVALIDATED
+mutation_calls=0
 ```
 
-No side effect follows.
+No side effect followed a stale trajectory permit.
 
 ---
 
-## 7. Durable audit chain
+## 9. Durable expiry proof
 
-Phase 7 introduces a Firestore-backed audit chain that remains tamper-evident by application design.
+A separate real Firestore run proved expired permit denial.
 
-Audit append is itself transactional:
+Observed:
 
-1. read durable audit sequence/head;
-2. compute payload digest and next event hash;
-3. write the next `audit_events/{event_id}` document;
-4. update `meta/audit` with the new sequence/head.
+```text
+decision=DENIED
+reason_code=PERMIT_EXPIRED
+permit_state=EXPIRED
+mutation_calls=0
+```
 
-A fresh executor/client therefore continues the existing chain rather than starting a new in-memory sequence.
-
-The storage is **not** described as immutable.
+No side effect followed an expired permit.
 
 ---
 
-## 8. Local semantic tests prepared
+## 10. Durable QC-bypass denial proof
 
-The Phase 7 test suite adds proofs for:
+The adversarial shortcut remained:
+
+`DISABLE_QUALITY_CONTROL_VALIDATION`
+
+Observed:
+
+```text
+decision=DENIED
+reason_code=GLOBAL_TRAJECTORY_INVARIANT_VIOLATION
+violated_invariant=FINAL_RELEASE_INTENT_AND_NOT_FRESH_QC_PASS=>QC_VALIDATION_ENABLED
+permit_count=0
+state_unchanged=true
+```
+
+This proves the global trajectory invariant still dominates durability. A denied unsafe action persists no permit and performs no mutation.
+
+---
+
+## 11. Durable audit chain
+
+Observed main durable summary:
+
+```text
+audit_chain_valid=true
+audit_events=6
+incidents=1
+proposals=2
+decisions=2
+permits=1
+executions=2
+```
+
+A fresh-process replay appended to and verified the same durable audit chain rather than starting a new in-memory chain.
+
+The audit remains described as **tamper-evident hash-chained application audit**, not immutable storage.
+
+---
+
+## 12. Regression proof
+
+Before the real Firestore run, the complete repository suite returned:
+
+```text
+Ran 37 tests
+OK
+```
+
+The added Phase 7 tests cover:
 
 - authorized permit persistence;
 - execution through a fresh executor instance;
@@ -180,26 +287,39 @@ Existing Phase 0–6 tests remain part of the mandatory regression.
 
 ---
 
-## 9. Real Cloud Firestore runner
+## 13. Security / dependency readback
 
-`scripts/firestore_authority_readback.py` is the real Phase 7 evidence runner.
+Phase 7 final readback requirements:
 
-It is designed to prove against the configured Google Cloud project:
+- no OpenAI dependency/reference;
+- no Anthropic dependency/reference;
+- no Firestore credential value in code or registers;
+- no Grafana/OTLP secret value in code or registers;
+- no new AI/model authority surface;
+- no pipeline/network side effect inside Firestore transaction callbacks;
+- only deterministic BOSAI authority logic can persist and consume permits.
 
-1. authorization persists proposal, decision, incident, policy, and an `ISSUED` permit;
-2. a fresh Firestore client/executor consumes and executes that permit;
-3. the permit reaches durable `EXECUTED`;
-4. a true fresh Python subprocess reloads Firestore and receives `DENIED_REPLAY` with zero mutation calls;
-5. QC bypass persists no permit and performs no mutation;
-6. a separate real Firestore run proves trajectory drift returns `REEVALUATION_REQUIRED`;
-7. a separate real Firestore run proves expiry returns `PERMIT_EXPIRED` and persists `EXPIRED`;
-8. the main durable audit chain still verifies after the fresh subprocess appended its replay-denial event.
-
-The runner prints identifiers and states, not ADC credentials or secret values.
+The real runner printed no secret values.
 
 ---
 
-## 10. Explicit non-scope
+## 14. Supported commands
+
+Local regression:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Real Firestore readback:
+
+```bash
+python -m scripts.firestore_authority_readback
+```
+
+---
+
+## 15. Explicit non-scope
 
 Phase 7 does not yet add:
 
@@ -215,43 +335,19 @@ These remain later gates.
 
 ---
 
-## 11. Current gate state
+## 16. Closure state
 
 ```text
-PHASE_7_CODE_PREPARATION=PASS_PENDING_TEST_READBACK
-PHASE_7_FIRESTORE_CLIENT_PIN=2.28.0
-PHASE_7_DURABLE_STORE=PREPARED
-PHASE_7_PERSISTENT_AUTHORITY_EXECUTOR=PREPARED
-PHASE_7_TRANSACTION_RETRY_SAFETY_TEST=PREPARED
-PHASE_7_FRESH_PROCESS_REPLAY_PROBE=PREPARED
-PHASE_7_REAL_FIRESTORE_RUNNER=PREPARED
-PHASE_7_LOCAL_REGRESSION=PENDING
-PHASE_7_FIRESTORE_API_DATABASE=PENDING
-PHASE_7_REAL_FIRESTORE_TRANSACTION=PENDING
-PHASE_7_FRESH_PROCESS_DURABLE_REPLAY=PENDING
-PHASE_7_REAL_STATE_DRIFT=PENDING
-PHASE_7_REAL_EXPIRY=PENDING
-PHASE_7=PARTIAL
+PHASE_7=PASS
+G7_A_REGRESSION=37_PASS
+G7_B_FIRESTORE_PROJECT_ACCESS=PASS
+G7_C_DURABLE_AUTHORIZED_EXECUTION=PASS
+G7_D_TRANSACTION_BOUNDARY=PASS
+G7_E_FRESH_PROCESS_REPLAY_DENIAL=PASS
+G7_F_STATE_DRIFT_REEVALUATION=PASS
+G7_G_EXPIRY_DENIAL=PASS
+G7_H_QC_ZERO_PERMIT_DENIAL=PASS
+G7_I_DURABLE_AUDIT=PASS
 ```
 
-No Firestore runtime PASS may be claimed from code inspection alone.
-
----
-
-## 12. Exit criteria
-
-Phase 7 may move to PASS only when:
-
-1. full repository regression is green;
-2. Firestore API/database availability is externally read back;
-3. real Firestore writes and transactional permit consumption succeed;
-4. authorized execution occurs only after `CONSUMED_PENDING` is committed;
-5. durable terminal permit state is `EXECUTED`;
-6. fresh-process replay is denied from Firestore state with zero mutation;
-7. real Firestore state drift requires reevaluation with zero mutation;
-8. real Firestore expiry denies execution and persists `EXPIRED`;
-9. QC bypass creates zero permit and zero mutation;
-10. durable audit chain verifies after cross-process activity;
-11. final diff/readback finds no authority bypass, no secret value, and no disallowed AI dependency.
-
-The branch remains unmerged until all gates are proven.
+Phase 7 is ready for final PR readback and expected-SHA squash merge into `air`.
