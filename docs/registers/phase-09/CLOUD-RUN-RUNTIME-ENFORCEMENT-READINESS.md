@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 9 Cloud Run Runtime Enforcement Readiness
 
-Status: **PREPARED — DEPLOYMENT AUTHORIZED, RUNTIME PROOF PENDING**  
+Status: **PASS — REAL CLOUD RUN RUNTIME IAM ENFORCEMENT PROVEN**  
 Issue: **#18 — PHASE 9 — Cloud Run Runtime Enforcement Proof**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -9,11 +9,13 @@ Working branch: `phase/09-cloud-run-runtime-enforcement`
 
 ---
 
-## 1. Phase objective
+## 1. Phase decision
 
-Phase 9 moves from Phase 8 readiness-only Cloud Run/IAM boundary planning to real runtime enforcement proof.
+Phase 9 is **PASS**.
 
-The intended runtime path remains:
+Phase 8 proved readiness only. Phase 9 deployed a minimal synthetic Cloud Run topology and captured real Google Cloud IAM runtime enforcement proof.
+
+Proven runtime path:
 
 ```text
 studio-control-plane
@@ -21,10 +23,24 @@ studio-control-plane
 → media-pipeline-sim
 ```
 
-The critical denied edge remains:
+Proven denied edge:
 
 ```text
 studio-control-plane ↛ media-pipeline-sim
+```
+
+Observed closure state:
+
+```text
+PHASE_9_LOCAL_REGRESSION=48_PASS
+PHASE_9_DEPLOYMENT_HUMAN_GO=RECEIVED
+PHASE_9_DRY_RUN_PLAN=PASS
+PHASE_9_CLOUD_RUN_DEPLOYMENT=PASS
+PHASE_9_RUNTIME_IAM_POSITIVE_PROOF=PASS
+PHASE_9_RUNTIME_IAM_NEGATIVE_PROOF=PASS
+PHASE_9_RUNTIME_IAM_ENFORCEMENT=PASS
+PHASE_9_SECRET_VALUES_PRINTED=FALSE
+PHASE_9=PASS
 ```
 
 ---
@@ -37,19 +53,24 @@ The operator gave the explicit deployment authorization phrase:
 HUMAN GO PHASE 9 DEPLOYMENT
 ```
 
-The deployment script still requires the matching environment variable before any cloud mutation:
+The deployment script required the matching environment variable before cloud mutation:
 
 ```text
 BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO=HUMAN GO PHASE 9 DEPLOYMENT
 ```
 
-This prevents accidental deployment from code checkout or script discovery.
+The real deployment proof observed:
+
+```text
+human_go_verified=true
+secret_values_printed=false
+```
 
 ---
 
 ## 3. Synthetic runtime resources
 
-Phase 9 prepares only minimal synthetic Cloud Run resources:
+Phase 9 deployed only minimal synthetic Cloud Run resources:
 
 ```text
 studio-control-plane
@@ -57,9 +78,7 @@ authority-executor
 media-pipeline-sim
 ```
 
-The runtime proof app is deployed from this repository's Dockerfile.
-
-The app is used only to prove Cloud Run/IAM invocation behavior. It is not a customer media workload.
+The runtime proof app was deployed from this repository's Dockerfile. It is not a customer media workload.
 
 ---
 
@@ -73,96 +92,117 @@ sa-authority-executor
 sa-media-pipeline-sim
 ```
 
-Expected emails are generated as:
+During the corrected redeploy, all three service accounts already existed:
 
 ```text
-<service-account-id>@<project>.iam.gserviceaccount.com
+created=false
 ```
 
 ---
 
-## 5. Required positive IAM proofs
+## 5. IAM bindings
+
+Expected allowed invoker bindings were applied:
 
 ```text
 sa-studio-control-plane → authority-executor
 sa-authority-executor → media-pipeline-sim
 ```
 
-The proof path is:
-
-```text
-public caller → studio-control-plane /execute-pipeline
-studio-control-plane service identity → authority-executor /execute-pipeline
-authority-executor service identity → media-pipeline-sim /health
-```
-
-No identity token is printed.
-
----
-
-## 6. Required negative IAM proofs
+The critical direct binding remained intentionally absent:
 
 ```text
 sa-studio-control-plane ↛ media-pipeline-sim
-public internet ↛ authority-executor
-public internet ↛ media-pipeline-sim
 ```
-
-The probe script must show denial for these paths.
 
 ---
 
-## 7. Runtime correction after first probe
+## 6. First probe and correction
 
-First real probe showed the negative edges working but the positive chain failing with Cloud Run 404 responses before the app route executed.
+The first real probe showed negative edges working, but the positive chain failed with Cloud Run `404` before the app route executed.
 
-Root cause: `authority-executor` and `media-pipeline-sim` used `ingress=internal-and-cloud-load-balancing`, while the Phase 9 proof chain invokes their `run.app` URLs using identity-token authentication.
+Root cause:
 
-Correction: keep the services non-public through Cloud Run IAM, not ingress isolation:
+```text
+authority-executor and media-pipeline-sim used ingress=internal-and-cloud-load-balancing
+while the proof chain invokes their run.app URLs using identity-token authentication.
+```
+
+Correction:
 
 ```text
 allow_unauthenticated=false
 ingress=all
-roles/run.invoker only for the allowed service account edge
+roles/run.invoker only for the allowed service-account edge
 ```
 
-This allows the positive service-to-service `run.app` proof while keeping unauthenticated public access denied and keeping `studio-control-plane ↛ media-pipeline-sim` denied by missing invoker binding.
+This keeps services private by IAM while making the run.app authenticated proof possible.
 
 ---
 
-## 8. Code prepared
+## 7. Runtime IAM proof
+
+The corrected probe returned:
+
+```text
+runtime_iam_enforcement_proven=true
+secret_values_printed=false
+```
+
+Positive proof:
+
+```text
+studio-control-plane /health = 200
+studio-control-plane → authority-executor = 200
+authority-executor → media-pipeline-sim = 200
+```
+
+Negative proof:
+
+```text
+public internet → authority-executor = 403
+public internet → media-pipeline-sim = 403
+studio-control-plane → media-pipeline-sim = denied by Cloud Run IAM
+```
+
+Interpretation:
+
+- public entrypoint works only on `studio-control-plane`;
+- private services reject unauthenticated public access;
+- `studio-control-plane` can invoke `authority-executor`;
+- `authority-executor` can invoke `media-pipeline-sim`;
+- `studio-control-plane` cannot invoke `media-pipeline-sim` directly.
+
+---
+
+## 8. Code shipped
 
 ### `src/bosai_studio/cloud_run_phase9.py`
 
-Defines:
-
-- exact Human GO environment gate;
-- synthetic runtime service definitions;
-- service-account mapping;
-- allowed invoker bindings;
-- intentionally absent bindings;
-- private-by-IAM service exposure semantics.
+Defines the Phase 9 Cloud Run deployment contract, Human GO guard, service-account mapping, allowed bindings, and intentionally absent bindings.
 
 ### `src/bosai_studio/cloud_run_runtime_app.py`
 
-Defines the synthetic runtime proof app with:
+Defines the synthetic runtime proof app:
 
-- `/health`;
-- `/execute-pipeline`;
-- `/call-pipeline-direct`.
+```text
+/health
+/execute-pipeline
+/call-pipeline-direct
+```
 
 ### `scripts/cloud_run_phase9_deploy.py`
 
-Deploys only when both conditions hold:
+Deploys only with both:
 
-1. `--apply` is passed;
-2. `BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO` exactly equals `HUMAN GO PHASE 9 DEPLOYMENT`.
-
-Otherwise it prints a dry-run plan and exits without mutation.
+```text
+--apply
+BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO=HUMAN GO PHASE 9 DEPLOYMENT
+```
 
 ### `scripts/cloud_run_phase9_proof.py`
 
-Performs positive and negative runtime IAM probes after deployment.
+Captures the positive and negative Cloud Run IAM runtime proof.
 
 ### `scripts/cloud_run_phase9_rollback.py`
 
@@ -170,38 +210,40 @@ Deletes the synthetic Cloud Run resources only with explicit rollback Human GO.
 
 ### `tests/test_cloud_run_phase9_deployment.py`
 
-Covers:
-
-- exact Human GO requirement;
-- distinct service accounts;
-- unproven status before runtime probe;
-- explicit allowed bindings;
-- absent direct studio-to-pipeline binding;
-- private services are not unauthenticated public.
+Covers exact Human GO gating, distinct service accounts, allowed bindings, absent direct binding, and private-by-IAM service behavior.
 
 ---
 
-## 9. Current gate state
+## 9. Regression proof
+
+Complete repository regression returned:
 
 ```text
-PHASE_9_CODE_PREPARATION=PASS_PENDING_TEST_READBACK
-PHASE_9_DEPLOYMENT_HUMAN_GO=RECEIVED
-PHASE_9_DRY_RUN_PLAN=PASS
-PHASE_9_LOCAL_REGRESSION=48_PASS
-PHASE_9_CLOUD_RUN_DEPLOYMENT=DEPLOYED_PENDING_REPROBE
-PHASE_9_FIRST_PROBE_NEGATIVE_EDGES=PASS
-PHASE_9_FIRST_PROBE_POSITIVE_CHAIN=FAIL_INGRESS_404
-PHASE_9_INGRESS_CORRECTION=PREPARED
-PHASE_9_POSITIVE_IAM_PROOF=PENDING
-PHASE_9_NEGATIVE_IAM_PROOF=PENDING_REPROBE
-PHASE_9=PARTIAL
+Ran 48 tests
+OK
 ```
 
-No runtime IAM enforcement PASS may be claimed before real Cloud Run probe evidence is captured.
+Existing Phase 0–8 tests remained part of the suite.
 
 ---
 
-## 10. Explicit non-scope
+## 10. Security / dependency readback
+
+Final Phase 9 readback requirements:
+
+- no OpenAI dependency/reference;
+- no Anthropic dependency/reference;
+- no Firestore credential value;
+- no Grafana/OTLP credential value;
+- no identity token printed;
+- no secret value printed;
+- Gemini/ADK still has no direct pipeline edge;
+- Grafana MCP remains observation-only;
+- runtime resources are synthetic and isolated.
+
+---
+
+## 11. Explicit non-scope
 
 Phase 9 does not add:
 
@@ -215,19 +257,17 @@ Phase 9 does not add:
 
 ---
 
-## 11. Exit criteria
+## 12. Closure state
 
-Phase 9 may move to PASS only when:
+```text
+PHASE_9=PASS
+G9_A_REGRESSION=48_PASS
+G9_B_HUMAN_GO_DEPLOYMENT=PASS
+G9_C_CLOUD_RUN_DEPLOYMENT=PASS
+G9_D_POSITIVE_RUNTIME_IAM_PROOF=PASS
+G9_E_NEGATIVE_RUNTIME_IAM_PROOF=PASS
+G9_F_SECRET_VALUES_PRINTED=FALSE
+G9_G_IDENTITY_TOKENS_PRINTED=FALSE
+```
 
-1. full repository regression is green;
-2. runtime plan is printed and reviewed;
-3. deployment script runs with explicit Human GO env gate;
-4. Cloud Run services exist with distinct service accounts;
-5. allowed invocation `studio → authority` succeeds;
-6. allowed invocation `authority → pipeline` succeeds;
-7. direct invocation `studio → pipeline` is denied;
-8. unauthenticated public invocation of private services is denied;
-9. probe output prints no secret or identity token values;
-10. final diff/readback finds no OpenAI/Anthropic dependency and no authority bypass.
-
-The branch remains unmerged until real runtime enforcement evidence exists or the phase is explicitly downgraded.
+Phase 9 is ready for final PR readback, red-team diff, and expected-SHA squash merge into `air`.
