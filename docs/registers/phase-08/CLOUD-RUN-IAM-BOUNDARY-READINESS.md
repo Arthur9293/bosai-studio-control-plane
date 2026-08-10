@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 8 Cloud Run IAM Boundary Readiness
 
-Status: **PREPARED — LOCAL REGRESSION AND REAL GCP PREFLIGHT PENDING**  
+Status: **PASS — READINESS-ONLY CLOUD RUN/IAM BOUNDARY PROVEN**  
 Issue: **#16 — PHASE 8 — Cloud Run IAM Runtime Boundary**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -9,11 +9,13 @@ Working branch: `phase/08-cloud-run-iam-boundary`
 
 ---
 
-## 1. Phase objective
+## 1. Phase decision
 
-Phase 8 begins the Google Cloud runtime boundary work.
+Phase 8 is **READINESS-ONLY PASS**.
 
-Phase 7 proved durable Firestore authority. Phase 8 does not add more AI. It defines and prepares the Cloud Run/IAM service identity boundary required by Architecture V1:
+Phase 7 proved durable Firestore authority. Phase 8 prepares the Google Cloud runtime boundary required by Architecture V1 without deploying new Cloud Run services and without claiming runtime IAM enforcement.
+
+Canonical intended control path remains:
 
 ```text
 studio-control-plane
@@ -21,10 +23,23 @@ studio-control-plane
 → media-pipeline-sim
 ```
 
-and the critical denied edge:
+Critical denied edge:
 
 ```text
 studio-control-plane ↛ media-pipeline-sim
+```
+
+Observed closure state:
+
+```text
+PHASE_8_LOCAL_REGRESSION=42_PASS
+PHASE_8_LOCAL_BOUNDARY_CONTRACT=PASS
+PHASE_8_GCP_READ_ONLY_PREFLIGHT=PASS
+PHASE_8_BOUNDARY_PLAN=PASS
+PHASE_8_CLOUD_MUTATION=FALSE
+PHASE_8_DEPLOYMENT_AUTHORIZED=FALSE
+PHASE_8_RUNTIME_IAM_ENFORCEMENT_PROVEN=FALSE
+PHASE_8=READINESS_ONLY_PASS
 ```
 
 ---
@@ -74,6 +89,13 @@ sa-authority-executor → media-pipeline-sim
 
 These are the only service-to-service invocation edges permitted by Phase 8's local contract.
 
+Observed boundary-plan output included the same allowed edges:
+
+```text
+studio-control-plane -> authority-executor
+authority-executor -> media-pipeline-sim
+```
+
 ---
 
 ## 5. Denied invocation edges
@@ -88,9 +110,82 @@ public internet → media-pipeline-sim
 
 Undeclared edges fail closed.
 
+Observed boundary-plan output confirmed denied edges for:
+
+```text
+studio-control-plane -> media-pipeline-sim
+gemini-adk -> media-pipeline-sim
+mcp-grafana -> media-pipeline-sim
+public-internet -> authority-executor
+public-internet -> media-pipeline-sim
+```
+
 ---
 
-## 6. Code prepared
+## 6. Regression proof
+
+Complete repository regression returned:
+
+```text
+Ran 42 tests
+OK
+```
+
+The added Phase 8 tests cover:
+
+- distinct service accounts;
+- only expected allowed edges;
+- denied direct studio-to-pipeline edge;
+- denied Gemini/ADK and Grafana MCP pipeline edges;
+- denied public access to private services;
+- undeclared edges fail closed;
+- plan remains readiness-only until real IAM proof exists.
+
+Existing Phase 0–7 tests remain part of the mandatory regression.
+
+---
+
+## 7. Real GCP read-only preflight
+
+`python -m scripts.cloud_run_gcp_preflight` was executed against:
+
+```text
+GOOGLE_CLOUD_PROJECT=bosai-gemini-xprize
+GOOGLE_CLOUD_LOCATION=global
+```
+
+Read-only command families returned `returncode=0`:
+
+```text
+gcloud run services list
+gcloud iam service-accounts list
+```
+
+This proves the operator environment can inspect Cloud Run and IAM state for the target project.
+
+The command output was intentionally not copied into this register because it included existing Cloud Run metadata and logical Secret Manager references. No secret values were captured or committed.
+
+---
+
+## 8. Non-mutating boundary plan
+
+`python -m scripts.cloud_run_boundary_plan` emitted a static readiness plan with:
+
+```text
+deployment_authorized=false
+runtime_iam_enforcement_proven=false
+```
+
+Interpretation:
+
+- Cloud Run deployment is not authorized by Phase 8 readiness-only closure;
+- no cloud resource was created, updated, deleted, or rebound;
+- runtime IAM enforcement is not claimed;
+- this phase proves design, tests, and operator/project preflight only.
+
+---
+
+## 9. Code prepared
 
 ### `src/bosai_studio/cloud_run_boundary.py`
 
@@ -120,36 +215,26 @@ It must not create, deploy, bind, delete, or mutate cloud resources.
 
 ### `tests/test_cloud_run_boundary.py`
 
-Covers:
-
-- distinct service accounts;
-- only expected allowed edges;
-- denied direct studio-to-pipeline edge;
-- denied Gemini/ADK and Grafana MCP pipeline edges;
-- denied public access to private services;
-- undeclared edges fail closed;
-- plan remains readiness-only until real IAM proof exists.
+Covers the local service identity and invocation-edge contract.
 
 ---
 
-## 7. Current gate state
+## 10. Security / dependency readback
 
-```text
-PHASE_8_CODE_PREPARATION=PASS_PENDING_TEST_READBACK
-PHASE_8_LOCAL_BOUNDARY_CONTRACT=PREPARED
-PHASE_8_GCP_PREFLIGHT_SCRIPT=PREPARED
-PHASE_8_REAL_GCP_PREFLIGHT=PENDING
-PHASE_8_REAL_CLOUD_RUN_DEPLOYMENT=PENDING
-PHASE_8_RUNTIME_IAM_POSITIVE_PROOF=PENDING
-PHASE_8_RUNTIME_IAM_NEGATIVE_PROOF=PENDING
-PHASE_8=PARTIAL
-```
+Phase 8 final readback requirements:
 
-No runtime IAM enforcement PASS may be claimed from local contract alone.
+- no OpenAI dependency/reference;
+- no Anthropic dependency/reference;
+- no Firestore credential value;
+- no Grafana/OTLP credential value;
+- no new AI/model authority surface;
+- no Cloud Run deployment command executed;
+- no IAM binding mutation executed;
+- no public exposure of private services.
 
 ---
 
-## 8. Explicit non-scope
+## 11. Explicit non-scope
 
 Phase 8 does not yet authorize:
 
@@ -163,26 +248,17 @@ Phase 8 does not yet authorize:
 
 ---
 
-## 9. Exit criteria
+## 12. Closure state
 
-Phase 8 can move to PASS only if one of these clearly labeled outcomes is reached:
+```text
+PHASE_8=READINESS_ONLY_PASS
+G8_A_REGRESSION=42_PASS
+G8_B_LOCAL_BOUNDARY_CONTRACT=PASS
+G8_C_GCP_READ_ONLY_PREFLIGHT=PASS
+G8_D_BOUNDARY_PLAN=PASS
+G8_E_CLOUD_MUTATION=FALSE
+G8_F_DEPLOYMENT_AUTHORIZED=FALSE
+G8_G_RUNTIME_IAM_ENFORCEMENT_PROVEN=FALSE
+```
 
-### Readiness-only PASS
-
-- full repository regression is green;
-- local boundary contract is tested;
-- real GCP read-only preflight succeeds;
-- no cloud mutation occurs;
-- register explicitly says runtime IAM enforcement is not yet proven.
-
-### Runtime-enforcement PASS
-
-- full repository regression is green;
-- minimal synthetic Cloud Run services are deployed with distinct service identities;
-- allowed service-to-service invocations succeed;
-- direct studio-to-pipeline invocation is denied;
-- public unauthenticated invocation of private services is denied;
-- no secret values are exposed;
-- deployment is reversible and isolated.
-
-The current branch starts as readiness-only until the user explicitly authorizes deployment work.
+Phase 8 is ready for final PR readback and expected-SHA squash merge into `air` as a readiness-only milestone.
