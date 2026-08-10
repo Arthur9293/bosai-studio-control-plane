@@ -45,102 +45,7 @@ PHASE_9=PASS
 
 ---
 
-## 2. Operator authorization
-
-The operator gave the explicit deployment authorization phrase:
-
-```text
-HUMAN GO PHASE 9 DEPLOYMENT
-```
-
-The deployment script required the matching environment variable before cloud mutation:
-
-```text
-BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO=HUMAN GO PHASE 9 DEPLOYMENT
-```
-
-The real deployment proof observed:
-
-```text
-human_go_verified=true
-secret_values_printed=false
-```
-
----
-
-## 3. Synthetic runtime resources
-
-Phase 9 deployed only minimal synthetic Cloud Run resources:
-
-```text
-studio-control-plane
-authority-executor
-media-pipeline-sim
-```
-
-The runtime proof app was deployed from this repository's Dockerfile. It is not a customer media workload.
-
----
-
-## 4. Service identities
-
-Distinct service accounts:
-
-```text
-sa-studio-control-plane
-sa-authority-executor
-sa-media-pipeline-sim
-```
-
-During the corrected redeploy, all three service accounts already existed:
-
-```text
-created=false
-```
-
----
-
-## 5. IAM bindings
-
-Expected allowed invoker bindings were applied:
-
-```text
-sa-studio-control-plane → authority-executor
-sa-authority-executor → media-pipeline-sim
-```
-
-The critical direct binding remained intentionally absent:
-
-```text
-sa-studio-control-plane ↛ media-pipeline-sim
-```
-
----
-
-## 6. First probe and correction
-
-The first real probe showed negative edges working, but the positive chain failed with Cloud Run `404` before the app route executed.
-
-Root cause:
-
-```text
-authority-executor and media-pipeline-sim used ingress=internal-and-cloud-load-balancing
-while the proof chain invokes their run.app URLs using identity-token authentication.
-```
-
-Correction:
-
-```text
-allow_unauthenticated=false
-ingress=all
-roles/run.invoker only for the allowed service-account edge
-```
-
-This keeps services private by IAM while making the run.app authenticated proof possible.
-
----
-
-## 7. Runtime IAM proof
+## 2. Runtime IAM proof
 
 The corrected probe returned:
 
@@ -175,46 +80,89 @@ Interpretation:
 
 ---
 
-## 8. Code shipped
+## 3. Deployment proof
 
-### `src/bosai_studio/cloud_run_phase9.py`
-
-Defines the Phase 9 Cloud Run deployment contract, Human GO guard, service-account mapping, allowed bindings, and intentionally absent bindings.
-
-### `src/bosai_studio/cloud_run_runtime_app.py`
-
-Defines the synthetic runtime proof app:
+The operator gave the explicit deployment authorization phrase:
 
 ```text
-/health
-/execute-pipeline
-/call-pipeline-direct
+HUMAN GO PHASE 9 DEPLOYMENT
 ```
 
-### `scripts/cloud_run_phase9_deploy.py`
+The real deployment proof observed:
 
-Deploys only with both:
+```text
+human_go_verified=true
+secret_values_printed=false
+```
+
+Phase 9 deployed only minimal synthetic Cloud Run resources:
+
+```text
+studio-control-plane
+authority-executor
+media-pipeline-sim
+```
+
+Expected allowed invoker bindings were applied:
+
+```text
+sa-studio-control-plane → authority-executor
+sa-authority-executor → media-pipeline-sim
+```
+
+The critical direct binding remained intentionally absent:
+
+```text
+sa-studio-control-plane ↛ media-pipeline-sim
+```
+
+---
+
+## 4. First probe correction
+
+The first real probe showed negative edges working, but the positive chain failed with Cloud Run `404` before the app route executed.
+
+Root cause:
+
+```text
+authority-executor and media-pipeline-sim used ingress=internal-and-cloud-load-balancing
+while the proof chain invokes their run.app URLs using identity-token authentication.
+```
+
+Correction:
+
+```text
+allow_unauthenticated=false
+ingress=all
+roles/run.invoker only for the allowed service-account edge
+```
+
+This keeps services private by IAM while making the run.app authenticated proof possible.
+
+---
+
+## 5. Code shipped
+
+- `src/bosai_studio/cloud_run_phase9.py`
+- `src/bosai_studio/cloud_run_runtime_app.py`
+- `scripts/cloud_run_phase9_deploy.py`
+- `scripts/cloud_run_phase9_proof.py`
+- `scripts/cloud_run_phase9_rollback.py`
+- `tests/test_cloud_run_phase9_deployment.py`
+- `Dockerfile`
+
+The deployment script requires both:
 
 ```text
 --apply
 BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO=HUMAN GO PHASE 9 DEPLOYMENT
 ```
 
-### `scripts/cloud_run_phase9_proof.py`
-
-Captures the positive and negative Cloud Run IAM runtime proof.
-
-### `scripts/cloud_run_phase9_rollback.py`
-
-Deletes the synthetic Cloud Run resources only with explicit rollback Human GO.
-
-### `tests/test_cloud_run_phase9_deployment.py`
-
-Covers exact Human GO gating, distinct service accounts, allowed bindings, absent direct binding, and private-by-IAM service behavior.
+The rollback script requires explicit rollback Human GO.
 
 ---
 
-## 9. Regression proof
+## 6. Regression proof
 
 Complete repository regression returned:
 
@@ -227,7 +175,7 @@ Existing Phase 0–8 tests remained part of the suite.
 
 ---
 
-## 10. Security / dependency readback
+## 7. Security / dependency readback
 
 Final Phase 9 readback requirements:
 
@@ -243,7 +191,7 @@ Final Phase 9 readback requirements:
 
 ---
 
-## 11. Explicit non-scope
+## 8. Explicit non-scope
 
 Phase 9 does not add:
 
@@ -257,7 +205,7 @@ Phase 9 does not add:
 
 ---
 
-## 12. Closure state
+## 9. Closure state
 
 ```text
 PHASE_9=PASS
