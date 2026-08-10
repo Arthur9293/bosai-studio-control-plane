@@ -7,9 +7,7 @@ Base branch: `air`
 Base SHA: `804ae52044a263701b998bdad4b17d5705efe10d`  
 Working branch: `phase/09-cloud-run-runtime-enforcement`
 
----
-
-## 1. Phase decision
+## Phase decision
 
 Phase 9 is **PASS**.
 
@@ -18,9 +16,7 @@ Phase 8 proved readiness only. Phase 9 deployed a minimal synthetic Cloud Run to
 Proven runtime path:
 
 ```text
-studio-control-plane
-→ authority-executor
-→ media-pipeline-sim
+studio-control-plane → authority-executor → media-pipeline-sim
 ```
 
 Proven denied edge:
@@ -29,23 +25,7 @@ Proven denied edge:
 studio-control-plane ↛ media-pipeline-sim
 ```
 
-Observed closure state:
-
-```text
-PHASE_9_LOCAL_REGRESSION=48_PASS
-PHASE_9_DEPLOYMENT_HUMAN_GO=RECEIVED
-PHASE_9_DRY_RUN_PLAN=PASS
-PHASE_9_CLOUD_RUN_DEPLOYMENT=PASS
-PHASE_9_RUNTIME_IAM_POSITIVE_PROOF=PASS
-PHASE_9_RUNTIME_IAM_NEGATIVE_PROOF=PASS
-PHASE_9_RUNTIME_IAM_ENFORCEMENT=PASS
-PHASE_9_SECRET_VALUES_PRINTED=FALSE
-PHASE_9=PASS
-```
-
----
-
-## 2. Runtime IAM proof
+## Runtime IAM proof
 
 The corrected probe returned:
 
@@ -70,9 +50,7 @@ public internet → media-pipeline-sim = 403
 studio-control-plane → media-pipeline-sim = denied by Cloud Run IAM
 ```
 
----
-
-## 3. Deployment proof
+## Deployment proof
 
 The operator gave the explicit deployment authorization phrase:
 
@@ -100,9 +78,7 @@ The critical direct binding remained intentionally absent:
 sa-studio-control-plane ↛ media-pipeline-sim
 ```
 
----
-
-## 4. First probe correction
+## First probe correction
 
 The first real probe showed negative edges working, but the positive chain failed with Cloud Run `404` before the app route executed.
 
@@ -116,9 +92,7 @@ roles/run.invoker only for the allowed service-account edge
 
 This keeps services private by IAM while making the run.app authenticated proof possible.
 
----
-
-## 5. Code shipped
+## Code shipped
 
 - `Dockerfile`
 - `src/bosai_studio/cloud_run_phase9.py`
@@ -128,22 +102,14 @@ This keeps services private by IAM while making the run.app authenticated proof 
 - `scripts/cloud_run_phase9_rollback.py`
 - `tests/test_cloud_run_phase9_deployment.py`
 
----
-
-## 6. Regression proof
-
-Complete repository regression returned:
+## Regression proof
 
 ```text
 Ran 48 tests
 OK
 ```
 
----
-
-## 7. Security / dependency readback
-
-Final Phase 9 readback requirements:
+## Security / dependency readback
 
 - no OpenAI dependency/reference;
 - no Anthropic dependency/reference;
@@ -155,15 +121,7 @@ Final Phase 9 readback requirements:
 - Grafana MCP remains observation-only;
 - runtime resources are synthetic and isolated.
 
----
-
-## 8. Non-scope
-
-Phase 9 does not add customer/production media workload, broad UI polish, generic RBAC, multi-agent orchestration, Grafana write tools, non-Google AI dependency, or persistent customer action execution.
-
----
-
-## 9. Closure state
+## Closure state
 
 ```text
 PHASE_9=PASS
