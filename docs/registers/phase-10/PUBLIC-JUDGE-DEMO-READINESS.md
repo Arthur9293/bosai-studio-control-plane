@@ -1,6 +1,6 @@
 # BOSAI Studio Control Plane — Phase 10 Public Judge-Facing Demo Readiness
 
-Status: **PREPARED — LOCAL DEMO SURFACE NOT YET PROVEN**  
+Status: **PASS — DEMO-SURFACE-READY / NO PUBLIC URL CLAIMED**  
 Issue: **#20 — PHASE 10 — Public Judge-Facing Control Plane Demo**  
 Topology mode: **ISOLATE**  
 Base branch: `air`  
@@ -9,11 +9,11 @@ Working branch: `phase/10-public-judge-control-plane-demo`
 
 ---
 
-## Phase objective
+## Phase decision
 
-Phase 10 translates the proven BOSAI control-plane stack into a judge-facing demo surface.
+Phase 10 is **DEMO-SURFACE-READY PASS**.
 
-It does not add new authority. It does not add new AI behavior. It does not claim a customer production workload.
+It translates the proven BOSAI control-plane stack into a judge-facing demo surface without adding new authority, new AI behavior, or customer workload claims.
 
 Locked thesis:
 
@@ -31,7 +31,7 @@ OBSERVE → REASON → PROPOSE → AUTHORIZE → EXECUTE → VERIFY → PROVE
 
 ## Proof basis
 
-Phase 10 summarizes proof semantics already established by prior phases:
+The demo surface summarizes existing proof semantics from prior phases:
 
 ```text
 Phase 3: deterministic authority core and vertical slice
@@ -47,83 +47,88 @@ Phase 9: real Cloud Run/IAM runtime enforcement proof
 
 ## Implemented
 
-### `src/bosai_studio/judge_demo_surface.py`
+- `src/bosai_studio/judge_demo_surface.py`
+- `scripts/render_judge_demo.py`
+- `tests/test_judge_demo_surface.py`
+- package version bump to `0.8.0`
 
-Defines the static judge-facing narrative:
-
-- locked BOSAI thesis;
-- proof cards;
-- workflow steps;
-- no public URL claim;
-- no customer workload claim;
-- no secret/token expectation.
-
-### `scripts/render_judge_demo.py`
-
-Renders the demo HTML to:
+The renderer produces:
 
 ```text
 build/judge-demo/index.html
 ```
 
-The script prints:
+The rendered page shows:
+
+- final trailer delivery SLA at risk;
+- Grafana as operational truth;
+- Gemini as proposal-only;
+- BOSAI deterministic authority;
+- Firestore durable authority state;
+- Cloud Run/IAM runtime boundary enforcement;
+- QC bypass denial;
+- replay/direct-mutation denial;
+- `studio-control-plane → authority-executor → media-pipeline-sim` allowed;
+- `studio-control-plane ↛ media-pipeline-sim` denied.
+
+---
+
+## Local proof
+
+Operator Mac regression:
 
 ```text
+Ran 52 tests in 30.028s
+OK
+```
+
+Local render:
+
+```text
+PHASE_10_DEMO_RENDERED=build/judge-demo/index.html
 PHASE_10_PUBLIC_URL_CLAIMED=false
 PHASE_10_SECRET_VALUES_PRINTED=false
 ```
 
-### `tests/test_judge_demo_surface.py`
-
-Covers:
-
-- thesis visibility;
-- workflow visibility;
-- authority proof claims;
-- Cloud Run/IAM denial claim;
-- no public URL claim;
-- no customer workload claim;
-- no secret/token markers.
-
----
-
-## Current gate state
+Visual review:
 
 ```text
-PHASE_10_CODE_PREPARATION=PREPARED
-PHASE_10_LOCAL_REGRESSION=PENDING
-PHASE_10_LOCAL_DEMO_RENDER=PENDING
-PHASE_10_PUBLIC_URL_CLAIMED=FALSE
-PHASE_10_PUBLIC_DEPLOYMENT=PENDING_HUMAN_GO
-PHASE_10=PARTIAL
+hero thesis visible=true
+workflow visible=true
+proof cards visible=true
+OBSERVE/REASON/PROPOSE/AUTHORIZE/EXECUTE/VERIFY/PROVE narrative visible=true
+no public hosted URL claimed=true
+no customer production workload claimed=true
+no secret or identity token output claimed=true
 ```
 
 ---
 
-## Non-scope
+## Security / scope readback
 
-Phase 10 does not authorize:
+```text
+new_ai_provider_added=false
+new_authority_path_added=false
+new_customer_workload_claimed=false
+grafana_write_tools_added=false
+public_url_claimed=false
+secret_values_printed=false
+identity_tokens_printed=false
+```
 
-- new AI provider;
-- new model surface;
-- new authority path;
-- new Cloud Run/IAM topology;
-- customer media workload;
-- Grafana write tools;
-- public URL claim without deployment proof;
-- Devpost final submission;
-- final video recording.
+Phase 10 does **not** claim public deployment. A later phase must capture explicit Human GO and public URL readback before claiming public-demo PASS.
 
 ---
 
-## Exit criteria
+## Closure state
 
-Phase 10 can close as **DEMO-SURFACE-READY PASS** when:
+```text
+PHASE_10=DEMO_SURFACE_READY_PASS
+PHASE_10_LOCAL_REGRESSION=52_PASS
+PHASE_10_LOCAL_DEMO_RENDER=PASS
+PHASE_10_VISUAL_REVIEW=PASS
+PHASE_10_PUBLIC_URL_CLAIMED=FALSE
+PHASE_10_PUBLIC_DEPLOYMENT=NOT_CLAIMED
+```
 
-1. full local regression is green;
-2. `python -m scripts.render_judge_demo` renders local HTML;
-3. content includes the locked thesis and workflow;
-4. content does not expose secrets or tokens;
-5. content does not claim public hosted URL.
-
-Phase 10 can close as **PUBLIC-DEMO PASS** only after explicit Human GO for deployment and public URL readback.
+Phase 10 is ready for final PR readback, red-team diff, and expected-SHA squash merge into `air`.
