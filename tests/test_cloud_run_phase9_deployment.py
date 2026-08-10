@@ -44,12 +44,22 @@ class Phase9CloudRunDeploymentContractTests(unittest.TestCase):
         self.assertIn(("sa-authority-executor", PIPELINE_SERVICE), targets)
         self.assertNotIn(("sa-studio-control-plane", PIPELINE_SERVICE), targets)
 
-    def test_private_services_are_not_publicly_unauthenticated(self) -> None:
+    def test_private_services_are_iam_private_not_publicly_unauthenticated(self) -> None:
         plan = phase9_deployment_plan("bosai-gemini-xprize")
         services = {service["name"]: service for service in plan["services"]}
         self.assertTrue(services[STUDIO_SERVICE]["allow_unauthenticated"])
         self.assertFalse(services[AUTHORITY_SERVICE]["allow_unauthenticated"])
         self.assertFalse(services[PIPELINE_SERVICE]["allow_unauthenticated"])
+        self.assertEqual(services[AUTHORITY_SERVICE]["ingress"], "all")
+        self.assertEqual(services[PIPELINE_SERVICE]["ingress"], "all")
+        self.assertEqual(
+            services[AUTHORITY_SERVICE]["private_by"],
+            "cloud-run-iam-no-allow-unauthenticated-and-explicit-invoker-binding",
+        )
+        self.assertEqual(
+            services[PIPELINE_SERVICE]["private_by"],
+            "cloud-run-iam-no-allow-unauthenticated-and-explicit-invoker-binding",
+        )
 
     def test_plan_starts_with_runtime_proof_unclaimed(self) -> None:
         plan = phase9_deployment_plan("bosai-gemini-xprize")
