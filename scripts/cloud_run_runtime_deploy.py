@@ -30,6 +30,10 @@ def run_command(argv: list[str]) -> dict[str, Any]:
     }
 
 
+def _sa_suffix(command_name: str, prefix: str) -> str:
+    return command_name.removeprefix(prefix)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Deploy synthetic Phase 9 Cloud Run IAM proof resources.")
     parser.add_argument("--execute", action="store_true", help="Actually run mutating gcloud commands.")
@@ -70,16 +74,33 @@ def main() -> None:
 
     require_human_go(os.getenv(HUMAN_GO_ENV))
 
-    results = []
+    results: list[dict[str, Any]] = []
+    existing_service_accounts: set[str] = set()
     for command in commands:
-        # Service-account describe is allowed to fail if the account does not exist yet.
-        # In that case the following create command is expected to establish it.
+        if command.name.startswith("create-sa-"):
+            suffix = _sa_suffix(command.name, "create-sa-")
+            if suffix in existing_service_accounts:
+                results.append(
+                    {
+                        "name": command.name,
+                        "argv": command.as_list(),
+                        "returncode": 0,
+                        "stdout": "SKIPPED_EXISTING_SERVICE_ACCOUNT",
+                        "stderr": "",
+                    }
+                )
+                continue
+
         result = run_command(command.as_list())
-        results.append({"name": command.name, **result})
+        result_with_name = {"name": command.name, **result}
+        results.append(result_with_name)
+
+        if command.name.startswith("describe-sa-") and result["returncode"] == 0:
+            existing_service_accounts.add(_sa_suffix(command.name, "describe-sa-"))
 
     output["deployment_performed"] = True
     output["results"] = results
-    output["all_returncodes_zero_or_describe_missing"] = all(
+    output["all_required_mutations_succeeded"] = all(
         result["returncode"] == 0 or str(result["name"]).startswith("describe-sa-")
         for result in results
     )
