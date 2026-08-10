@@ -70,14 +70,6 @@ public internet → media-pipeline-sim = 403
 studio-control-plane → media-pipeline-sim = denied by Cloud Run IAM
 ```
 
-Interpretation:
-
-- public entrypoint works only on `studio-control-plane`;
-- private services reject unauthenticated public access;
-- `studio-control-plane` can invoke `authority-executor`;
-- `authority-executor` can invoke `media-pipeline-sim`;
-- `studio-control-plane` cannot invoke `media-pipeline-sim` directly.
-
 ---
 
 ## 3. Deployment proof
@@ -93,14 +85,6 @@ The real deployment proof observed:
 ```text
 human_go_verified=true
 secret_values_printed=false
-```
-
-Phase 9 deployed only minimal synthetic Cloud Run resources:
-
-```text
-studio-control-plane
-authority-executor
-media-pipeline-sim
 ```
 
 Expected allowed invoker bindings were applied:
@@ -122,13 +106,6 @@ sa-studio-control-plane ↛ media-pipeline-sim
 
 The first real probe showed negative edges working, but the positive chain failed with Cloud Run `404` before the app route executed.
 
-Root cause:
-
-```text
-authority-executor and media-pipeline-sim used ingress=internal-and-cloud-load-balancing
-while the proof chain invokes their run.app URLs using identity-token authentication.
-```
-
 Correction:
 
 ```text
@@ -143,22 +120,13 @@ This keeps services private by IAM while making the run.app authenticated proof 
 
 ## 5. Code shipped
 
+- `Dockerfile`
 - `src/bosai_studio/cloud_run_phase9.py`
 - `src/bosai_studio/cloud_run_runtime_app.py`
 - `scripts/cloud_run_phase9_deploy.py`
 - `scripts/cloud_run_phase9_proof.py`
 - `scripts/cloud_run_phase9_rollback.py`
 - `tests/test_cloud_run_phase9_deployment.py`
-- `Dockerfile`
-
-The deployment script requires both:
-
-```text
---apply
-BOSAI_PHASE9_DEPLOYMENT_HUMAN_GO=HUMAN GO PHASE 9 DEPLOYMENT
-```
-
-The rollback script requires explicit rollback Human GO.
 
 ---
 
@@ -170,8 +138,6 @@ Complete repository regression returned:
 Ran 48 tests
 OK
 ```
-
-Existing Phase 0–8 tests remained part of the suite.
 
 ---
 
@@ -191,17 +157,9 @@ Final Phase 9 readback requirements:
 
 ---
 
-## 8. Explicit non-scope
+## 8. Non-scope
 
-Phase 9 does not add:
-
-- customer/production media workload;
-- broad public UI polish;
-- generic RBAC system;
-- multi-agent orchestration;
-- Grafana write tools;
-- non-Google AI dependency;
-- persistent customer action execution.
+Phase 9 does not add customer/production media workload, broad UI polish, generic RBAC, multi-agent orchestration, Grafana write tools, non-Google AI dependency, or persistent customer action execution.
 
 ---
 
