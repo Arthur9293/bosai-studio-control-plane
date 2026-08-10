@@ -18,7 +18,11 @@ AUTHORITY_SA = "sa-authority-executor"
 PIPELINE_SA = "sa-media-pipeline-sim"
 
 STUDIO_INGRESS = "all"
-PRIVATE_SERVICE_INGRESS = "internal-and-cloud-load-balancing"
+# Phase 9 proves IAM denial through Cloud Run service authentication, not ingress-level
+# network denial. `run.app` invocation between services is required for the positive
+# proof chain, while `--no-allow-unauthenticated` and explicit invoker bindings keep
+# authority and pipeline non-public.
+PRIVATE_SERVICE_INGRESS = "all"
 RUNTIME_IMAGE_SOURCE = "."
 
 
@@ -55,12 +59,14 @@ def phase9_deployment_plan(project_id: str, region: str = DEFAULT_PHASE9_REGION)
                 "service_account": pipeline_email,
                 "allow_unauthenticated": False,
                 "ingress": PRIVATE_SERVICE_INGRESS,
+                "private_by": "cloud-run-iam-no-allow-unauthenticated-and-explicit-invoker-binding",
             },
             {
                 "name": AUTHORITY_SERVICE,
                 "service_account": authority_email,
                 "allow_unauthenticated": False,
                 "ingress": PRIVATE_SERVICE_INGRESS,
+                "private_by": "cloud-run-iam-no-allow-unauthenticated-and-explicit-invoker-binding",
             },
             {
                 "name": STUDIO_SERVICE,
