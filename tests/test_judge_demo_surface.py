@@ -21,6 +21,8 @@ class JudgeDemoSurfaceTests(unittest.TestCase):
             "QC bypass is denied",
             "studio-control-plane → authority-executor → media-pipeline-sim",
             "studio-control-plane ↛ media-pipeline-sim",
+            "IBM Bob — development process partner",
+            "not runtime authority",
         ]
         for text in required:
             self.assertIn(text, html)
