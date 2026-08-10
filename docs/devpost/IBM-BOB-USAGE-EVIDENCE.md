@@ -1,6 +1,6 @@
 # IBM Bob Usage Evidence — Phase 12
 
-Status: **REAL IBM BOB RUN CAPTURED — PENDING FINAL HUMAN REVIEW / COMMIT**
+Status: **REAL IBM BOB RUN CAPTURED — EVIDENCE COMMITTED (LOCAL) / HUMAN REVIEW PASS**
 
 This file is BOSAI's Phase 12 evidence capture point for documenting real
 IBM Bob usage for the Devpost Agentic Cinema IBM partner track.
@@ -11,8 +11,11 @@ IBM Bob usage for the Devpost Agentic Cinema IBM partner track.
 
 ```text
 IBM_BOB_USED=true
-IBM_BOB_USAGE_PROVEN=false
-IBM_BOB_EVIDENCE_COMMITTED=false
+IBM_BOB_USAGE_PROVEN=true
+IBM_BOB_EVIDENCE_COMMITTED=true
+IBM_BOB_EVIDENCE_COMMIT=4c4075fd0ba744c86cd8e1e649f0a9338351115d
+IBM_BOB_EVIDENCE_COMMIT_SCOPE=LOCAL_GIT_COMMIT_NOT_YET_PUSHED
+GITHUB_PUSHED=false
 PUBLIC_URL_CLAIMED=false
 SUBMISSION_READY=false
 SECRET_VALUES_EXPOSED=false
@@ -124,7 +127,7 @@ BOB_FILES_CHANGED=
 
 ```text
 IMPLEMENTATION_EDITS_HUMAN_REVIEWED=true
-EVIDENCE_FILE_FINAL_HUMAN_REVIEW=PENDING
+EVIDENCE_FILE_FINAL_HUMAN_REVIEW=PASS
 ```
 
 The following were accepted by human review before write authorization:
@@ -212,8 +215,11 @@ SECRET_VALUES_EXPOSED=false
 IDENTITY_TOKENS_EXPOSED=false
 PUBLIC_URL_CLAIMED=false
 SUBMISSION_READY=false
-IBM_BOB_USAGE_PROVEN=false
-IBM_BOB_EVIDENCE_COMMITTED=false
+IBM_BOB_USAGE_PROVEN=true
+IBM_BOB_EVIDENCE_COMMITTED=true
+IBM_BOB_EVIDENCE_COMMIT=4c4075fd0ba744c86cd8e1e649f0a9338351115d
+IBM_BOB_EVIDENCE_COMMIT_SCOPE=LOCAL_GIT_COMMIT_NOT_YET_PUSHED
+GITHUB_PUSHED=false
 DEPLOYMENT_ATTEMPTED=false
 NEW_AI_PROVIDER_ADDED=false
 OPENAI_RUNTIME_DEPENDENCY=false
@@ -227,9 +233,13 @@ IBM Bob is NOT BOSAI runtime authority.
 
 ---
 
-## Prohibited claims — confirmed not made
+## Evidence commit state and remaining non-claims
 
-- `IBM_BOB_USAGE_PROVEN=true` has not been set. It remains false until the
-  human commits this evidence and confirms.
+- `IBM_BOB_USAGE_PROVEN=true` is now set because the evidence package exists
+  as local git commit: `4c4075fd0ba744c86cd8e1e649f0a9338351115d`
+- `IBM_BOB_EVIDENCE_COMMITTED=true` is scoped to:
+  `LOCAL_GIT_COMMIT_NOT_YET_PUSHED`
+- `GITHUB_PUSHED=false` remains preserved.
 - No hosted public URL has been claimed.
+- No public deployment has been attempted.
 - No final Devpost submission readiness has been claimed.
