@@ -2,12 +2,28 @@
 
 **Governed autonomous operations for AI-powered media production.**
 
-> *Intelligence is not authority.*
+> **Intelligence is not authority.**
 
-BOSAI is a studio operations control plane that separates AI intelligence from
-operational authority. The canonical architecture is:
+BOSAI Studio Control Plane is a contest-built, clean-room implementation for the Google Cloud **Agentic Cinema: The Blockbuster Hackathon**. It demonstrates a governed media-operations workflow in which Gemini can observe evidence and propose an action, while BOSAI alone evaluates policy, issues a bounded single-use permit, controls execution, verifies postconditions, and records proof.
 
-```
+## Judge links
+
+- **Hosted project / judge surface:** https://arthur9293.github.io/bosai-studio-control-plane/
+- **Devpost submission:** https://devpost.com/software/bosai-studio-control-plane
+- **Demo video:** https://youtu.be/bNyq_NPUYco
+- **Source repository:** https://github.com/Arthur9293/bosai-studio-control-plane
+- **Selected partner track:** IBM
+- **License:** MIT — see [`LICENSE`](LICENSE)
+
+## Contest provenance
+
+This repository and its contest implementation were created during the contest period as a new clean-room project. No pre-existing BOSAI application code was imported into this repository. Earlier phase records document the progressive build from thesis and architecture through executable runtime, Google Cloud proof, IBM Bob development evidence, hosted judge surface, and final submission packaging.
+
+IBM Bob was used as a **development-process partner** for the IBM track. It is not part of BOSAI runtime authority and cannot issue permits, execute mutations, or bypass the deterministic control path. Evidence is recorded in [`docs/devpost/IBM-BOB-USAGE-EVIDENCE.md`](docs/devpost/IBM-BOB-USAGE-EVIDENCE.md).
+
+## Architecture
+
+```text
 Grafana observes
 Gemini proposes
 BOSAI authorizes
@@ -16,111 +32,131 @@ Cloud Run/IAM enforces
 Verifier proves
 ```
 
-No AI model can issue a permit, execute a mutation, or bypass a Human GO gate
-on its own.
+The governed workflow is:
 
----
-
-## Governed Workflow
-
-```
+```text
 OBSERVE → REASON → PROPOSE → AUTHORIZE → EXECUTE → VERIFY → PROVE
 ```
 
 | Step | Actor | What happens |
 |---|---|---|
-| OBSERVE | Grafana + OpenTelemetry | Telemetry is read from Grafana Cloud Loki. Final trailer delivery SLA at risk is surfaced. |
-| REASON | Gemini / Google ADK | Gemini reads the observed evidence and reasons about a recovery action. |
-| PROPOSE | Gemini proposal envelope | A proposal is emitted (e.g. `RESTART_TRANSCODE_WORKER`). No permit or mutation exists yet. |
-| AUTHORIZE | BOSAI authority executor | BOSAI evaluates policy deterministically and issues a single-use permit — or denies. |
-| EXECUTE | Authority-controlled path | Mutation occurs only through the authority executor after permit consumption. |
-| VERIFY | Verifier + Grafana evidence | Postconditions are checked from evidence, not Gemini prose. Stale evidence fails closed. |
-| PROVE | Verifier | The Verifier returns `POSTCONDITIONS_VERIFIED` only when authoritative state and run-bound telemetry evidence satisfy deterministic checks. Firestore separately persists durable authority and audit state. |
+| OBSERVE | Grafana + OpenTelemetry | Runtime evidence exposes a final-trailer delivery incident. |
+| REASON | Gemini / Google ADK | Gemini reasons over read-only Grafana evidence. |
+| PROPOSE | Gemini proposal envelope | One bounded proposal is emitted with `proposal_only=true`. |
+| AUTHORIZE | BOSAI deterministic authority | Policy and trajectory invariants are evaluated; authorization is not delegated to the model. |
+| EXECUTE | Authority-controlled path | Mutation is allowed only after a valid single-use permit is consumed. |
+| VERIFY | BOSAI Verifier + evidence | Postconditions are checked against authoritative state and run-bound telemetry. |
+| PROVE | Firestore audit + runtime evidence | Durable authority state and verification evidence provide an auditable proof trail. |
 
----
+## Google Cloud / Gemini implementation
 
-## Stack
+The project uses Google Cloud AI and runtime components directly in code:
 
-| Component | Technology | Proved in |
-|---|---|---|
-| Observability | Grafana Cloud (Loki/telemetry) + official Grafana MCP | Phases 4–6 |
-| AI reasoning | Gemini via Google ADK (proposal-only) | Phase 5 |
-| Authority executor | BOSAI deterministic policy engine | Phase 3 |
-| Durable authority state | Google Cloud Firestore | Phase 7 |
-| Runtime boundary enforcement | Cloud Run + Google Cloud IAM | Phases 8–9 |
-| Telemetry export | OpenTelemetry SDK + OTLP HTTP exporter | Phase 4 |
-| Verification | BOSAI Verifier (postcondition evidence checks) | Phase 6 |
+- `google-adk[mcp]` for the Gemini agent;
+- Vertex AI mode enforced by `GOOGLE_GENAI_USE_VERTEXAI=true`;
+- Gemini `gemini-2.5-flash` as proposal-only intelligence;
+- Google Cloud Firestore for durable authority and audit state;
+- Cloud Run + IAM for runtime service boundaries;
+- Google authentication libraries for service-to-service identity.
 
-All listed technologies are directly evidenced in the phase registers under
-`docs/registers/`.
+The Gemini implementation is in [`src/bosai_studio/gemini_agent.py`](src/bosai_studio/gemini_agent.py) and [`src/bosai_studio/gemini_config.py`](src/bosai_studio/gemini_config.py). The agent is allowlisted to the read-only Grafana MCP tool `query_loki_logs`; no mutation tools are exposed to it.
 
----
+## IBM partner-track evidence
 
-## IBM Partner Track
+IBM Bob was used in Plan + Agent modes during Phase 12 for bounded repository inspection, compliance-gap analysis, README refinement, and human-reviewed judge-surface improvements.
 
-Phase 12 locks IBM as the selected partner track for BOSAI's Devpost Agentic
-Cinema submission.
-
-**IBM Bob** (IBM's AI coding assistant) is used as a **development-process
-partner** during Phase 12 of this project. IBM Bob has assisted with:
-
-- repository inspection and gap analysis;
-- Phase 12 gap identification against the compliance register;
-- README narrative refinement.
-
-**IBM Bob is not BOSAI runtime authority.** IBM Bob has no role in BOSAI's
-authority topology, cannot issue permits, cannot execute mutations, and cannot
-bypass Human GO gates. The distinction is explicit and intentional:
-
-```
-IBM Bob          = development process partner only
+```text
+IBM Bob          = development-process partner only
 Gemini           = proposal-only runtime intelligence
 BOSAI            = deterministic authority
 Google Cloud IAM = runtime enforcement
 ```
 
-The IBM Bob usage evidence record is maintained at
-[`docs/devpost/IBM-BOB-USAGE-EVIDENCE.md`](docs/devpost/IBM-BOB-USAGE-EVIDENCE.md).
+See:
 
----
+- [`docs/devpost/IBM-BOB-USAGE-EVIDENCE.md`](docs/devpost/IBM-BOB-USAGE-EVIDENCE.md)
+- [`docs/devpost/IBM-BOB-RUNBOOK.md`](docs/devpost/IBM-BOB-RUNBOOK.md)
 
-## Run the Local Judge Demo
+## Judge quick start
 
-Render the judge-facing demo surface locally:
+Requirements: Python 3.11+.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+python -m unittest discover -s tests -v
 python -m scripts.render_judge_demo
 ```
 
-Output: `build/judge-demo/index.html`
+The rendered judge surface is written to:
 
-Open the file in a browser to review the governed workflow narrative, proof
-cards, and demo steps. The renderer does not contact any external service, does
-not claim a public URL, and does not print secrets.
-
----
-
-## Phase Register Trail
-
-All phase decisions, proof readbacks, and closure states are recorded in:
-
-```
-docs/registers/
-  phase-01/   Winning thesis lock
-  phase-02/   Architecture v1 lock
-  phase-03/   Minimal vertical slice readback
-  phase-04/   Grafana MCP integration readiness
-  phase-05/   Gemini agent loop readiness
-  phase-06/   Governed execution and verification
-  phase-07/   Firestore durable authority
-  phase-08/   Cloud Run / IAM boundary readiness
-  phase-09/   Cloud Run runtime enforcement proof
-  phase-10/   Public judge-facing demo readiness
-  phase-11/   Devpost compliance alignment
-  phase-12/   IBM partner track lock and public demo URL
+```text
+build/judge-demo/index.html
 ```
 
----
+The repository includes environment templates only; secret values are not committed:
+
+- `ops/google.env.example`
+- `ops/grafana.env.example`
+
+Live Vertex AI / Grafana / Firestore / Cloud Run proof requires the corresponding authorized cloud credentials and resources. The historical registers preserve the exact runtime readbacks used during the contest build.
+
+## Runtime proof highlights
+
+The contest build progressively proved:
+
+- deterministic BOSAI authority and single-use permits;
+- replay denial and state-drift re-evaluation;
+- real Grafana Cloud telemetry and official read-only Grafana MCP use;
+- real Gemini / Google ADK proposal generation grounded in Grafana evidence;
+- governed execution with postcondition verification;
+- durable Firestore authority state;
+- real Cloud Run + IAM positive and negative invocation-edge proof;
+- IBM Bob development-process usage;
+- public GitHub Pages judge surface;
+- public YouTube demo and submitted Devpost project.
+
+The key Cloud Run boundary proven in Phase 9 is:
+
+```text
+studio-control-plane → authority-executor → media-pipeline-sim
+studio-control-plane ↛ media-pipeline-sim
+```
+
+## Security and competition boundary
+
+- synthetic media workflow and synthetic operational state only;
+- no customer production workload;
+- no model-issued permit or model-controlled execution;
+- no OpenAI or Anthropic runtime dependency;
+- no committed credential, token, private key, or identity token;
+- `.gitignore` excludes `.env`, `.env.*`, `*.pem`, `*.key`, and `*.token`;
+- example environment files use placeholders / `REDACTED` values;
+- Grafana MCP is read-only for the Gemini observation path;
+- IBM Bob is development tooling, not runtime authority.
+
+## Evidence trail
+
+The chronological proof records are under `docs/registers/`:
+
+```text
+phase-01  Winning thesis lock
+phase-02  Architecture V1 lock
+phase-03  Minimal governed vertical slice
+phase-04  Grafana Cloud + official MCP runtime
+phase-05  Gemini / Google ADK reasoning loop
+phase-06  Governed execution and verification
+phase-07  Firestore durable authority
+phase-08  Cloud Run / IAM boundary readiness
+phase-09  Cloud Run runtime enforcement proof
+phase-10  Judge-facing demo surface
+phase-11  Devpost compliance alignment
+phase-12  IBM track, public demo, and final Devpost/GitHub compliance closeout
+```
+
+For the final submission state, use [`docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md`](docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md) as the superseding closeout packet. Earlier `MISSING`, `SUBMISSION_READY=false`, or pre-publication statements are historical snapshots from before final Devpost submission.
 
 ## License
 
