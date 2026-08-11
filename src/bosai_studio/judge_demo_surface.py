@@ -30,6 +30,11 @@ PROOF_CARDS: tuple[ProofCard, ...] = (
     ProofCard("Runtime boundary", "Cloud Run / IAM enforced", "Phase 9 PASS"),
     ProofCard("Observability", "Grafana is operational truth", "MCP read-only"),
     ProofCard("Safety invariant", "Final release requires fresh QC", "QC bypass denied"),
+    ProofCard(
+        "IBM partner track",
+        "IBM Bob — development process partner",
+        "not runtime authority",
+    ),
 )
 
 
