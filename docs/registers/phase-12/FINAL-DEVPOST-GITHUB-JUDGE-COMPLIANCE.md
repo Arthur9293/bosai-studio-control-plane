@@ -1,11 +1,11 @@
 # Phase 12 — Final Devpost / GitHub Judge Compliance Closeout
 
-Status: **CONTENT COMPLIANCE PASS — REPOSITORY PUBLICATION GATE REMAINS**  
+Status: **PASS — FINAL DEVPOST / GITHUB JUDGE COMPLIANCE**  
 Date: **2026-08-11**  
 Contest: **Agentic Cinema: The Blockbuster Hackathon**  
 Selected partner track: **IBM**
 
-This packet is the superseding source of truth for the final Devpost/GitHub judge-readiness state. Earlier Phase 11 / Phase 12 `MISSING`, `SUBMISSION_READY=false`, `DEVPOST_SUBMISSION_PERFORMED=false`, and pre-publication statements are preserved as historical snapshots and are superseded here where the underlying state has changed.
+This packet is the superseding source of truth for the final Devpost/GitHub judge-readiness state. Earlier Phase 11 / Phase 12 `MISSING`, `SUBMISSION_READY=false`, `DEVPOST_SUBMISSION_PERFORMED=false`, private-repository, and pre-publication statements are preserved as historical snapshots and are superseded here where the underlying state has changed.
 
 ## Final Devpost readback
 
@@ -27,20 +27,41 @@ The project was published and submitted on Devpost on 2026-08-11 while the conte
 
 ## Official requirement mapping
 
-| Requirement | Final content state | Evidence |
+| Requirement | Final state | Evidence |
 |---|---:|---|
 | Media / entertainment workflow | PASS | Final-trailer delivery incident and studio workflow are explicit. |
 | Functional agent / agentic workflow | PASS | Gemini/Google ADK proposal loop plus governed BOSAI authority/execution/verification code. |
 | Google Cloud AI use | PASS | Vertex AI mode is required in `gemini_config.py`; Google ADK `LlmAgent` is instantiated in `gemini_agent.py`. |
 | Google Cloud runtime | PASS | Firestore durable authority and Cloud Run/IAM runtime proof are implemented and recorded. |
-| Partner-track requirement | PASS | IBM selected; real IBM Bob development-process use is documented with Plan + Agent evidence. |
-| Hosted project URL | PASS | Public GitHub Pages judge surface is live and previously read back HTTP 200. |
+| IBM partner-track requirement | PASS | IBM selected; real IBM Bob Plan + Agent development-process use is documented. |
+| Hosted project URL | PASS | GitHub Pages is public, built, HTTPS enforced, and served from canonical `air` + `/docs`. |
 | Demo video | PASS | Public YouTube URL is attached to the Devpost project. |
-| Open-source license | PASS | Complete MIT `LICENSE` exists. |
+| Public open-source repository | PASS | Repository visibility readback is `public`; canonical default branch is `air`. |
+| Open-source license | PASS | Complete MIT `LICENSE` exists on `air`. |
 | Source/run instructions | PASS | Root README provides judge links, stack, local test/render instructions, environment templates, and proof trail. |
-| Secret hygiene | PASS | No real `.env` file is in the tracked tree; `.gitignore` excludes env/key/token patterns; example files contain placeholders / `REDACTED`. |
-| No prohibited non-Google runtime AI | PASS | Runtime dependency manifest and inspected Gemini implementation contain Google ADK / Google Cloud AI only; historical registers also record no OpenAI/Anthropic runtime dependency. |
+| Secret hygiene | PASS | No real `.env`, PEM, private-key, or token file was tracked in the inspected tree; example values are placeholders / `REDACTED`. |
+| No prohibited non-Google runtime AI | PASS | Runtime dependency manifest and inspected Gemini implementation contain Google ADK / Google Cloud AI only; historical registers record no OpenAI/Anthropic runtime dependency. |
 | New contest implementation | PASS / evidence-backed | Repository build began during the contest and prior phase records state no pre-existing BOSAI application code was imported. |
+
+## Canonical GitHub readback
+
+```text
+PR_26_MERGED=true
+PR_26_DRAFT=false
+PR_26_MERGE_COMMIT=15e893ff3afa830d4af04d0ac67ac208ac4d57b4
+CANONICAL_BRANCH=air
+SOURCE_PACKAGE_CANONICAL_AT=15e893ff3afa830d4af04d0ac67ac208ac4d57b4
+REPOSITORY_VISIBILITY=public
+DEFAULT_BRANCH=air
+LICENSE_PRESENT=true
+GITHUB_PAGES_STATUS=built
+GITHUB_PAGES_PUBLIC=true
+GITHUB_PAGES_SOURCE_BRANCH=air
+GITHUB_PAGES_SOURCE_FOLDER=/docs
+GITHUB_PAGES_HTTPS_ENFORCED=true
+```
+
+The final publication readback was performed after the repository was changed to Public and after GitHub Pages was moved from the temporary Phase 12 branch to canonical `air` + `/docs`.
 
 ## Runtime implementation evidence
 
@@ -100,29 +121,6 @@ LOCAL_REGRESSION=52_PASS
 
 IBM Bob remains development-process tooling only and is not runtime authority.
 
-## Secret / public-source preflight
-
-Tracked-tree preflight on the Phase 12 head found:
-
-```text
-REAL_DOTENV_TRACKED=false
-PEM_TRACKED=false
-PRIVATE_KEY_FILE_TRACKED=false
-TOKEN_FILE_TRACKED=false
-EXAMPLE_ENV_FILES_PRESENT=true
-EXAMPLE_ENV_VALUES=PLACEHOLDER_OR_REDACTED
-```
-
-Root `.gitignore` includes:
-
-```text
-.env
-.env.*
-*.pem
-*.key
-*.token
-```
-
 ## Historical correction notice
 
 Phase 11 contained the line:
@@ -131,38 +129,11 @@ Phase 11 contained the line:
 Public OSS repository | PASS | Repo is public and MIT-licensed.
 ```
 
-That statement was premature with respect to repository visibility. The repository was still private at the final 2026-08-11 connector preflight. The MIT license/content requirement was satisfied, but **public visibility was not yet satisfied**. This closeout explicitly corrects that historical claim.
+That statement was premature at the time because the repository was still private. The final readback now confirms that the repository is in fact Public, so the contest requirement is satisfied.
 
-Likewise, Phase 12 and IBM Bob evidence files that still mention missing video, missing Devpost copy, or `SUBMISSION_READY=false` reflect the state before the successful Devpost submission and are superseded by the live Devpost readback recorded above.
+Likewise, earlier Phase 12 / IBM Bob evidence files that mention missing video, missing Devpost copy, `SUBMISSION_READY=false`, private repository visibility, or Pages sourced from the temporary Phase 12 branch are historical snapshots. They are superseded by this final readback.
 
-## GitHub publication gate
-
-At creation of this closeout packet:
-
-```text
-SOURCE_CONTENT_JUDGE_READY=true
-ROOT_README_JUDGE_READY=true
-LICENSE_PRESENT=true
-PUBLIC_JUDGE_PAGE_READY=true
-PR_26_CONTENT_READY_FOR_FINAL_REVIEW=true
-REPOSITORY_VISIBILITY=private
-REPOSITORY_PUBLIC_REQUIRED=true
-GITHUB_PAGES_SOURCE_BRANCH=phase/12-ibm-partner-track-public-demo-url
-GITHUB_PAGES_SOURCE_FOLDER=/docs
-```
-
-Required final publication sequence:
-
-1. merge PR #26 to canonical `air` after final diff/readback;
-2. verify the root README, source, tests, license, and `/docs` judge page on `air`;
-3. change repository visibility to **Public**;
-4. set GitHub Pages source to canonical `air` + `/docs` (or otherwise confirm the Pages deployment is served from canonical post-merge source);
-5. verify the repository and hosted page without authenticated GitHub access;
-6. only then delete the Phase 12 branch if desired.
-
-Do **not** delete `phase/12-ibm-partner-track-public-demo-url` while GitHub Pages still depends on it.
-
-## Closeout classification
+## Final closeout classification
 
 ```text
 DEVPOST_SUBMISSION=PASS
@@ -170,12 +141,16 @@ DEVPOST_VIDEO=PASS
 HOSTED_PROJECT=PASS
 IBM_TRACK_EVIDENCE=PASS
 GOOGLE_RUNTIME_EVIDENCE=PASS
+PUBLIC_OPEN_SOURCE_REPOSITORY=PASS
 LICENSE=PASS
 SOURCE_PACKAGE_CONTENT=PASS
 SECRET_PREFLIGHT=PASS
+GITHUB_PAGES_CANONICAL_SOURCE=PASS
 CONTENT_CONSISTENCY=PASS_WITH_HISTORICAL_CORRECTION
-REPOSITORY_PUBLICATION=PENDING_EXTERNAL_GITHUB_VISIBILITY_GATE
-FINAL_JUDGE_COMPLIANCE=PASS_ONLY_AFTER_PUBLIC_REPOSITORY_READBACK
+FINAL_JUDGE_COMPLIANCE=PASS
+PHASE_12=CLOSED_COMPLETE
 ```
 
-No runtime service, cloud resource, production workload, secret, or authority path is modified by this closeout.
+The temporary branch `phase/12-ibm-partner-track-public-demo-url` is no longer required by GitHub Pages. It may be deleted later as repository housekeeping; branch deletion is not required for judge compliance.
+
+No runtime service, cloud resource, production workload, secret, or authority path was modified by this final publication readback.
