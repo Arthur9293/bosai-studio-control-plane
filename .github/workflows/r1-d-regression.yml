@@ -20,10 +20,21 @@ jobs:
     name: Full regression (Python 3.11)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
-      - name: Checkout exact commit
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        run: |
+          echo "EXPECTED_SHA=$EXPECTED_SHA"
+          echo "CHECKED_OUT_SHA=$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
