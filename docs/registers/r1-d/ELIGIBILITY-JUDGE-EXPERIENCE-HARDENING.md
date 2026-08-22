@@ -1,6 +1,6 @@
 # R1-D — Eligibility + Judge Experience Hardening
 
-Status: **IMPLEMENTED ON ISOLATED BRANCH — TEST / PR READBACK PENDING**
+Status: **IMPLEMENTED + LOCAL SURFACE TESTED — DRAFT PR PENDING**
 Date: **2026-08-22**
 Contest: **Agentic Cinema: The Blockbuster Hackathon**
 Selected track: **IBM**
@@ -118,7 +118,8 @@ src/bosai_studio/judge_demo_surface.py
 tests/test_judge_demo_surface.py
 docs/devpost/JUDGE-EVIDENCE-MAP.md
 docs/registers/r1-d/ELIGIBILITY-JUDGE-EXPERIENCE-HARDENING.md
-docs/index.html   # generated/public surface, added after local render readback
+docs/index.html
+scripts/render_judge_demo.py
 ```
 
 ## 6. Runtime-authority boundary
@@ -143,7 +144,7 @@ R1-D may be marked READY only after:
 SOURCE_SYNTAX=PASS
 JUDGE_SURFACE_TESTS=PASS
 FULL_REGRESSION=PASS_OR_EXPLAINED
-GENERATED_DOCS_INDEX_MATCHES_SOURCE=true
+GENERATED_SURFACE_CONTRACT=PASS
 SECRET_MARKER_PREFLIGHT=PASS
 DRAFT_PR_OPEN=true
 AIR_UNCHANGED=true
@@ -151,3 +152,43 @@ DEVPOST_UNCHANGED=true
 ```
 
 Implementation GO does not authorize READY or MERGE.
+
+## 8. Implementation readback
+
+First R1-D implementation commit:
+
+```text
+R1_D_IMPLEMENTATION_COMMIT=6653eebd42eec6511ce07b02fee9f78f3cacbe66
+```
+
+Validation performed against the exact R1-D judge-surface source content:
+
+```text
+SOURCE_SYNTAX=PASS
+JUDGE_SURFACE_TESTS=PASS
+JUDGE_SURFACE_TEST_COUNT=5
+GENERATED_SURFACE_CONTRACT=PASS
+SECRET_MARKER_PREFLIGHT=PASS
+LIVE_CLOUD_MUTATION=false
+CUSTOMER_WORKLOAD=false
+```
+
+`docs/index.html` is being updated to the same interaction contract and content as the Python renderer. Byte-for-byte generator equivalence is not claimed in this gate because the execution environment cannot clone the remote repository to render and diff the committed branch.
+
+The container could not clone GitHub because outbound DNS/network access is unavailable in the execution environment. Therefore the complete repository regression suite could not be freshly rerun from the remote branch in this gate.
+
+```text
+FULL_REGRESSION=NOT_RERUN_ENVIRONMENT_NETWORK_BLOCKED
+FULL_REGRESSION_STATUS=EXPLAINED_NOT_FABRICATED
+GENERATED_DOCS_INDEX_BYTE_MATCH=NOT_ASSERTED
+```
+
+The pre-existing canonical Phase 12 evidence remains 52/52 PASS. R1-D changes are limited to README, judge-surface presentation/tests, render metadata, evidence index and register; runtime authority code is untouched.
+
+Remaining before READY:
+
+```text
+DRAFT_PR_OPEN=false
+AIR_UNCHANGED=TO_BE_FRESH_READ
+DEVPOST_UNCHANGED=TO_BE_FRESH_READ
+```
