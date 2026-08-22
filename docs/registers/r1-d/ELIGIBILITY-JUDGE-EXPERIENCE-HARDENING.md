@@ -1,6 +1,6 @@
 # R1-D — Eligibility + Judge Experience Hardening
 
-Status: **IMPLEMENTED + LOCAL SURFACE TESTED — DRAFT PR PENDING**
+Status: **IMPLEMENTED — DRAFT PR #28 OPEN — NOT READY / NOT MERGED**
 Date: **2026-08-22**
 Contest: **Agentic Cinema: The Blockbuster Hackathon**
 Selected track: **IBM**
@@ -185,10 +185,21 @@ GENERATED_DOCS_INDEX_BYTE_MATCH=NOT_ASSERTED
 
 The pre-existing canonical Phase 12 evidence remains 52/52 PASS. R1-D changes are limited to README, judge-surface presentation/tests, render metadata, evidence index and register; runtime authority code is untouched.
 
-Remaining before READY:
+Post-implementation control readback:
 
 ```text
-DRAFT_PR_OPEN=false
-AIR_UNCHANGED=TO_BE_FRESH_READ
-DEVPOST_UNCHANGED=TO_BE_FRESH_READ
+DRAFT_PR_OPEN=true
+DRAFT_PR_NUMBER=28
+PR_BASE=air
+PR_BASE_SHA=5978a0b0ade8a73ccf28fbc78ec15a6fe6257167
+PR_HEAD_BEFORE_REGISTER_CLOSEOUT=3abbc604784f67da6a3a1b0d80538851822fed4c
+PR_COMMITS_BEFORE_REGISTER_CLOSEOUT=2
+PR_CHANGED_FILES_BEFORE_REGISTER_CLOSEOUT=7
+AIR_UNCHANGED=true
+AIR_HEAD=5978a0b0ade8a73ccf28fbc78ec15a6fe6257167
+DEVPOST_UNCHANGED=true
+DEVPOST_PROJECT_STATE=published
+DEVPOST_PROJECT_UPDATED_AT=2026-08-22T13:25:30.540-04:00
 ```
+
+R1-D is **not READY** because READY is a separate Human GO. Merge is not authorized.
