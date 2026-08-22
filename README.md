@@ -8,16 +8,27 @@ BOSAI Studio Control Plane is a contest-built, clean-room implementation for the
 
 ## Judge links
 
-- **Hosted project / judge surface:** https://arthur9293.github.io/bosai-studio-control-plane/
+- **Hosted project / interactive judge surface:** https://arthur9293.github.io/bosai-studio-control-plane/
 - **Devpost submission:** https://devpost.com/software/bosai-studio-control-plane
 - **Demo video:** https://youtu.be/bNyq_NPUYco
 - **Source repository:** https://github.com/Arthur9293/bosai-studio-control-plane
 - **Selected partner track:** IBM
 - **License:** MIT — see [`LICENSE`](LICENSE)
+- **Judge evidence map:** [`docs/devpost/JUDGE-EVIDENCE-MAP.md`](docs/devpost/JUDGE-EVIDENCE-MAP.md)
 
-## Contest provenance
+## Contest provenance and clean-room boundary
 
-This repository and its contest implementation were created during the contest period as a new clean-room project. No pre-existing BOSAI application code was imported into this repository. Earlier phase records document the progressive build from thesis and architecture through executable runtime, Google Cloud proof, IBM Bob development evidence, hosted judge surface, and final submission packaging.
+The Agentic Cinema contest period began on **July 27, 2026**. This repository was created on **August 9, 2026** and its initial commit contained only the MIT license and a two-line repository description.
+
+This submission is a **new contest implementation**, not a copy or extension of a pre-existing BOSAI codebase:
+
+- no source file from another BOSAI repository was imported here;
+- no pre-existing BOSAI deployment or production service is required by this project;
+- no customer workload or customer dataset is reused;
+- the media workflow, runtime topology, tests, evidence registers, and judge surface were implemented inside this repository during the contest period;
+- the broader BOSAI governance thesis predates the contest, but this **Studio Control Plane implementation does not**.
+
+The chronological commit and register trail under `docs/registers/` is retained so judges can verify the build sequence from thesis → architecture → executable vertical slice → real partner/runtime evidence → hosted judge experience.
 
 IBM Bob was used as a **development-process partner** for the IBM track. It is not part of BOSAI runtime authority and cannot issue permits, execute mutations, or bypass the deterministic control path. Evidence is recorded in [`docs/devpost/IBM-BOB-USAGE-EVIDENCE.md`](docs/devpost/IBM-BOB-USAGE-EVIDENCE.md).
 
@@ -48,6 +59,23 @@ OBSERVE → REASON → PROPOSE → AUTHORIZE → EXECUTE → VERIFY → PROVE
 | VERIFY | BOSAI Verifier + evidence | Postconditions are checked against authoritative state and run-bound telemetry. |
 | PROVE | Firestore audit + runtime evidence | Durable authority state and verification evidence provide an auditable proof trail. |
 
+## Hosted judge experience
+
+The public judge surface is deliberately **safe to inspect without credentials**. It provides an interactive replay of three already-proven control outcomes:
+
+1. governed restart → authorized, executed, verified;
+2. unsafe QC bypass → denied by invariant;
+3. consumed-permit replay → denied.
+
+The browser replay is **not a fake live backend** and it does not call private Google Cloud or Grafana services. It is labeled as a deterministic evidence replay and links the judge to the source files and historical runtime readbacks that prove the real external integrations.
+
+This separation lets judges test the product semantics without exposing secrets or mutation authority while preserving a clear distinction between:
+
+```text
+INTERACTIVE JUDGE REPLAY = deterministic, credential-free product surface
+REAL RUNTIME PROOF       = contest-period Grafana + Gemini + Firestore + Cloud Run/IAM evidence
+```
+
 ## Google Cloud / Gemini implementation
 
 The project uses Google Cloud AI and runtime components directly in code:
@@ -66,7 +94,7 @@ The Gemini implementation is in [`src/bosai_studio/gemini_agent.py`](src/bosai_s
 IBM Bob was used in Plan + Agent modes during Phase 12 for bounded repository inspection, compliance-gap analysis, README refinement, and human-reviewed judge-surface improvements.
 
 ```text
-IBM Bob          = development-process partner only
+IBM Bob          = development-process partner
 Gemini           = proposal-only runtime intelligence
 BOSAI            = deterministic authority
 Google Cloud IAM = runtime enforcement
@@ -76,6 +104,7 @@ See:
 
 - [`docs/devpost/IBM-BOB-USAGE-EVIDENCE.md`](docs/devpost/IBM-BOB-USAGE-EVIDENCE.md)
 - [`docs/devpost/IBM-BOB-RUNBOOK.md`](docs/devpost/IBM-BOB-RUNBOOK.md)
+- [`docs/devpost/JUDGE-EVIDENCE-MAP.md`](docs/devpost/JUDGE-EVIDENCE-MAP.md)
 
 ## Judge quick start
 
@@ -135,7 +164,8 @@ studio-control-plane ↛ media-pipeline-sim
 - `.gitignore` excludes `.env`, `.env.*`, `*.pem`, `*.key`, and `*.token`;
 - example environment files use placeholders / `REDACTED` values;
 - Grafana MCP is read-only for the Gemini observation path;
-- IBM Bob is development tooling, not runtime authority.
+- IBM Bob is development tooling, not runtime authority;
+- hosted interactive replay performs no cloud mutation and requires no secret.
 
 ## Evidence trail
 
@@ -154,9 +184,10 @@ phase-09  Cloud Run runtime enforcement proof
 phase-10  Judge-facing demo surface
 phase-11  Devpost compliance alignment
 phase-12  IBM track, public demo, and final Devpost/GitHub compliance closeout
+r1-d      Eligibility + judge-experience hardening
 ```
 
-For the final submission state, use [`docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md`](docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md) as the superseding closeout packet. Earlier `MISSING`, `SUBMISSION_READY=false`, or pre-publication statements are historical snapshots from before final Devpost submission.
+For the original final submission state, use [`docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md`](docs/registers/phase-12/FINAL-DEVPOST-GITHUB-JUDGE-COMPLIANCE.md). For the post-submission hardening workstream, use [`docs/registers/r1-d/ELIGIBILITY-JUDGE-EXPERIENCE-HARDENING.md`](docs/registers/r1-d/ELIGIBILITY-JUDGE-EXPERIENCE-HARDENING.md).
 
 ## License
 
