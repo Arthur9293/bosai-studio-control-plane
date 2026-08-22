@@ -58,14 +58,46 @@
     </header>
 
     <section class="grid" aria-label="Proof summary">
-      <article class="card"><p class="eyebrow">Contest provenance</p><h3>Contest-built clean-room implementation</h3><p class="status">repository created Aug 9, 2026</p></article>
-      <article class="card"><p class="eyebrow">AI role</p><h3>Gemini proposes only</h3><p class="status">proposal_only=true</p></article>
-      <article class="card"><p class="eyebrow">Authority</p><h3>BOSAI deterministic executor</h3><p class="status">single-use permit required</p></article>
-      <article class="card"><p class="eyebrow">Durability</p><h3>Firestore authority state</h3><p class="status">real runtime proof</p></article>
-      <article class="card"><p class="eyebrow">Runtime boundary</p><h3>Cloud Run / IAM enforced</h3><p class="status">positive + negative edges proven</p></article>
-      <article class="card"><p class="eyebrow">Operational evidence</p><h3>Grafana Cloud + official MCP</h3><p class="status">read-only observation path</p></article>
-      <article class="card"><p class="eyebrow">Safety invariant</p><h3>Final release requires fresh QC</h3><p class="status">QC bypass denied</p></article>
-      <article class="card"><p class="eyebrow">IBM partner track</p><h3>IBM Bob — development-process partner</h3><p class="status">real usage evidenced</p></article>
+      <article class="card">
+          <p class="eyebrow">Contest provenance</p>
+          <h3>Contest-built clean-room implementation</h3>
+          <p class="status">repository created Aug 9, 2026</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">AI role</p>
+          <h3>Gemini proposes only</h3>
+          <p class="status">proposal_only=true</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">Authority</p>
+          <h3>BOSAI deterministic executor</h3>
+          <p class="status">single-use permit required</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">Durability</p>
+          <h3>Firestore authority state</h3>
+          <p class="status">real runtime proof</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">Runtime boundary</p>
+          <h3>Cloud Run / IAM enforced</h3>
+          <p class="status">positive + negative edges proven</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">Operational evidence</p>
+          <h3>Grafana Cloud + official MCP</h3>
+          <p class="status">read-only observation path</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">Safety invariant</p>
+          <h3>Final release requires fresh QC</h3>
+          <p class="status">QC bypass denied</p>
+        </article>
+<article class="card">
+          <p class="eyebrow">IBM partner track</p>
+          <h3>IBM Bob — development-process partner</h3>
+          <p class="status">real usage evidenced</p>
+        </article>
     </section>
 
     <section class="replay" aria-labelledby="replay-title">
@@ -74,27 +106,78 @@
       <p class="notice">Choose an action to inspect the deterministic outcome already proven by the contest implementation. <strong>This surface does not call live cloud services, consume a real permit, or mutate a pipeline.</strong> Real Grafana, Gemini, Firestore and Cloud Run/IAM evidence is preserved in the repository.</p>
       <div class="replay-actions">
         <button type="button" class="scenario-button" data-scenario="governed-restart">Run governed restart</button>
-        <button type="button" class="scenario-button" data-scenario="qc-bypass">Try unsafe QC bypass</button>
-        <button type="button" class="scenario-button" data-scenario="permit-replay">Try permit replay</button>
+<button type="button" class="scenario-button" data-scenario="qc-bypass">Try unsafe QC bypass</button>
+<button type="button" class="scenario-button" data-scenario="permit-replay">Try permit replay</button>
       </div>
-      <div class="result" id="scenario-result" aria-live="polite"><p class="status">Select a scenario to inspect its governed outcome.</p></div>
+      <div class="result" id="scenario-result" aria-live="polite">
+        <p class="status">Select a scenario to inspect its governed outcome.</p>
+      </div>
     </section>
 
     <section class="steps" aria-label="BOSAI governed workflow">
-      <section class="step"><div class="step-index">OBSERVE</div><div><p class="actor">Grafana + telemetry</p><h3>Final trailer delivery SLA is at risk.</h3><p>Real Grafana Cloud Loki/telemetry path was proven during the contest build.</p></div></section>
-      <section class="step"><div class="step-index">REASON</div><div><p class="actor">Gemini / Google ADK</p><h3>Gemini reads evidence and proposes a restart.</h3><p>Proposal remains NOT_EVALUATED until BOSAI authority runs.</p></div></section>
-      <section class="step"><div class="step-index">PROPOSE</div><div><p class="actor">Gemini proposal envelope</p><h3>Action proposed: RESTART_TRANSCODE_WORKER on transcode-a.</h3><p>No permit, mutation, or authority claim exists at proposal time.</p></div></section>
-      <section class="step"><div class="step-index">AUTHORIZE</div><div><p class="actor">BOSAI authority executor</p><h3>BOSAI evaluates policy and issues a single-use permit for the safe path.</h3><p>QC bypass is denied by invariant: FINAL_RELEASE_INTENT_AND_NOT_FRESH_QC_PASS=&gt;QC_VALIDATION_ENABLED.</p></div></section>
-      <section class="step"><div class="step-index">EXECUTE</div><div><p class="actor">Authority-controlled execution path</p><h3>Mutation occurs only through the authority executor after permit consumption.</h3><p>Replay is denied and direct pipeline mutation is not a valid edge.</p></div></section>
-      <section class="step"><div class="step-index">VERIFY</div><div><p class="actor">Verifier + Grafana evidence</p><h3>Postconditions are verified from evidence, not Gemini prose.</h3><p>Stale or missing evidence fails closed.</p></div></section>
-      <section class="step"><div class="step-index">PROVE</div><div><p class="actor">Firestore audit + Cloud Run IAM</p><h3>Authority state is durable and runtime edges are enforced by Google Cloud IAM.</h3><p>studio-control-plane → authority-executor → media-pipeline-sim is allowed; studio-control-plane ↛ media-pipeline-sim is denied.</p></div></section>
+      <section class="step">
+          <div class="step-index">OBSERVE</div>
+          <div>
+            <p class="actor">Grafana + telemetry</p>
+            <h3>Final trailer delivery SLA is at risk.</h3>
+            <p>Real Grafana Cloud Loki/telemetry path was proven during the contest build.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">REASON</div>
+          <div>
+            <p class="actor">Gemini / Google ADK</p>
+            <h3>Gemini reads evidence and proposes a restart.</h3>
+            <p>Proposal remains NOT_EVALUATED until BOSAI authority runs.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">PROPOSE</div>
+          <div>
+            <p class="actor">Gemini proposal envelope</p>
+            <h3>Action proposed: RESTART_TRANSCODE_WORKER on transcode-a.</h3>
+            <p>No permit, mutation, or authority claim exists at proposal time.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">AUTHORIZE</div>
+          <div>
+            <p class="actor">BOSAI authority executor</p>
+            <h3>BOSAI evaluates policy and issues a single-use permit for the safe path.</h3>
+            <p>QC bypass is denied by invariant: FINAL_RELEASE_INTENT_AND_NOT_FRESH_QC_PASS=&gt;QC_VALIDATION_ENABLED.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">EXECUTE</div>
+          <div>
+            <p class="actor">Authority-controlled execution path</p>
+            <h3>Mutation occurs only through the authority executor after permit consumption.</h3>
+            <p>Replay is denied and direct pipeline mutation is not a valid edge.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">VERIFY</div>
+          <div>
+            <p class="actor">Verifier + Grafana evidence</p>
+            <h3>Postconditions are verified from evidence, not Gemini prose.</h3>
+            <p>Stale or missing evidence fails closed.</p>
+          </div>
+        </section>
+<section class="step">
+          <div class="step-index">PROVE</div>
+          <div>
+            <p class="actor">Firestore audit + Cloud Run IAM</p>
+            <h3>Authority state is durable and runtime edges are enforced by Google Cloud IAM.</h3>
+            <p>studio-control-plane → authority-executor → media-pipeline-sim is allowed; studio-control-plane ↛ media-pipeline-sim is denied.</p>
+          </div>
+        </section>
     </section>
 
     <p class="footer">Competition boundary: synthetic media workflow only; no customer production workload; no secret or identity-token values are published. Hosted interaction is a deterministic evidence replay, not a simulated claim of live cloud execution.</p>
   </main>
 
   <script>
-    const scenarios = [{"scenario_id":"governed-restart","label":"Run governed restart","request":"RESTART_TRANSCODE_WORKER(transcode-a)","decision":"AUTHORIZED","result":"permit consumed → worker restarted → postcondition verified","proof":"Contest runtime evidence proved the governed positive path."},{"scenario_id":"qc-bypass","label":"Try unsafe QC bypass","request":"DISABLE_QC_VALIDATION(final-release)","decision":"DENIED","result":"no permit → no mutation","proof":"Global trajectory invariant requires fresh QC before final release."},{"scenario_id":"permit-replay","label":"Try permit replay","request":"REUSE_CONSUMED_PERMIT","decision":"DENIED","result":"single-use permit already consumed","proof":"Replay denial is a deterministic BOSAI authority property."}];
+    const scenarios = [{"scenario_id":"governed-restart","label":"Run governed restart","request":"RESTART_TRANSCODE_WORKER(transcode-a)","decision":"AUTHORIZED","result":"permit consumed \u2192 worker restarted \u2192 postcondition verified","proof":"Contest runtime evidence proved the governed positive path."},{"scenario_id":"qc-bypass","label":"Try unsafe QC bypass","request":"DISABLE_QC_VALIDATION(final-release)","decision":"DENIED","result":"no permit \u2192 no mutation","proof":"Global trajectory invariant requires fresh QC before final release."},{"scenario_id":"permit-replay","label":"Try permit replay","request":"REUSE_CONSUMED_PERMIT","decision":"DENIED","result":"single-use permit already consumed","proof":"Replay denial is a deterministic BOSAI authority property."}];
     const result = document.getElementById("scenario-result");
     function showScenario(id) {
       const scenario = scenarios.find((item) => item.scenario_id === id);
