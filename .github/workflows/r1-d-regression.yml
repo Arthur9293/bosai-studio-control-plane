@@ -1,0 +1,53 @@
+name: R1-D Regression
+
+on:
+  pull_request:
+    branches:
+      - air
+  push:
+    branches:
+      - milestone/agentic-cinema-r1-d-eligibility-judge-experience-hardening
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r1-d-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-regression:
+    name: Full regression (Python 3.11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Compile source and tests
+        run: python -m compileall -q src scripts tests
+
+      - name: Run full unit regression
+        run: python -m unittest discover -s tests -v
+
+      - name: Render judge demo
+        run: python -m scripts.render_judge_demo
+
+      - name: Verify rendered judge surface
+        run: |
+          test -s build/judge-demo/index.html
+          grep -F "Recorded evidence replay" build/judge-demo/index.html
+          grep -F "IBM Bob — development-process partner" build/judge-demo/index.html
+          grep -F "This surface does not call live cloud services" build/judge-demo/index.html
