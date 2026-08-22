@@ -113,6 +113,7 @@ It is never presented as BOSAI runtime authority.
 ## 5. Files in R1-D implementation scope
 
 ```text
+.github/workflows/r1-d-regression.yml
 README.md
 src/bosai_studio/judge_demo_surface.py
 tests/test_judge_demo_surface.py
@@ -138,22 +139,24 @@ It does **not** alter:
 
 ## 7. Required exit readback
 
-R1-D may be marked READY only after:
+R1-D may be marked READY only after the **current PR head** satisfies:
 
 ```text
+EXACT_HEAD_CHECKOUT=PASS
 SOURCE_SYNTAX=PASS
 JUDGE_SURFACE_TESTS=PASS
-FULL_REGRESSION=PASS_OR_EXPLAINED
+FULL_REGRESSION=PASS
 GENERATED_SURFACE_CONTRACT=PASS
+GENERATED_DOCS_INDEX_BYTE_MATCH=PASS
 SECRET_MARKER_PREFLIGHT=PASS
 DRAFT_PR_OPEN=true
 AIR_UNCHANGED=true
 DEVPOST_UNCHANGED=true
 ```
 
-Implementation GO does not authorize READY or MERGE.
+Implementation GO, CI PASS, and REVIEW do not by themselves authorize READY or MERGE.
 
-## 8. Implementation readback
+## 8. Historical implementation readback — superseded where noted
 
 First R1-D implementation commit:
 
@@ -161,7 +164,7 @@ First R1-D implementation commit:
 R1_D_IMPLEMENTATION_COMMIT=6653eebd42eec6511ce07b02fee9f78f3cacbe66
 ```
 
-Validation performed against the exact R1-D judge-surface source content:
+Validation performed against the initial R1-D judge-surface source content:
 
 ```text
 SOURCE_SYNTAX=PASS
@@ -173,19 +176,17 @@ LIVE_CLOUD_MUTATION=false
 CUSTOMER_WORKLOAD=false
 ```
 
-`docs/index.html` is being updated to the same interaction contract and content as the Python renderer. Byte-for-byte generator equivalence is not claimed in this gate because the execution environment cannot clone the remote repository to render and diff the committed branch.
-
-The container could not clone GitHub because outbound DNS/network access is unavailable in the execution environment. Therefore the complete repository regression suite could not be freshly rerun from the remote branch in this gate.
+At that earlier implementation point, the execution container could not clone GitHub because outbound DNS/network access was unavailable. The following values are therefore preserved strictly as **historical state at that point** and are superseded by Section 9 for regression status:
 
 ```text
-FULL_REGRESSION=NOT_RERUN_ENVIRONMENT_NETWORK_BLOCKED
-FULL_REGRESSION_STATUS=EXPLAINED_NOT_FABRICATED
-GENERATED_DOCS_INDEX_BYTE_MATCH=NOT_ASSERTED
+HISTORICAL_FULL_REGRESSION=NOT_RERUN_ENVIRONMENT_NETWORK_BLOCKED
+HISTORICAL_FULL_REGRESSION_STATUS=EXPLAINED_NOT_FABRICATED
+HISTORICAL_GENERATED_DOCS_INDEX_BYTE_MATCH=NOT_ASSERTED
 ```
 
-The pre-existing canonical Phase 12 evidence remains 52/52 PASS. R1-D changes are limited to README, judge-surface presentation/tests, render metadata, evidence index and register; runtime authority code is untouched.
+The pre-existing canonical Phase 12 evidence was 52/52 PASS at that time. R1-D changes remain limited to judge-facing presentation/tests, evidence, CI, and documentation; runtime authority code is untouched.
 
-Post-implementation control readback:
+Historical post-implementation control readback:
 
 ```text
 DRAFT_PR_OPEN=true
@@ -193,13 +194,47 @@ DRAFT_PR_NUMBER=28
 PR_BASE=air
 PR_BASE_SHA=5978a0b0ade8a73ccf28fbc78ec15a6fe6257167
 PR_HEAD_BEFORE_REGISTER_CLOSEOUT=3abbc604784f67da6a3a1b0d80538851822fed4c
-PR_COMMITS_BEFORE_REGISTER_CLOSEOUT=2
-PR_CHANGED_FILES_BEFORE_REGISTER_CLOSEOUT=7
 AIR_UNCHANGED=true
 AIR_HEAD=5978a0b0ade8a73ccf28fbc78ec15a6fe6257167
 DEVPOST_UNCHANGED=true
 DEVPOST_PROJECT_STATE=published
-DEVPOST_PROJECT_UPDATED_AT=2026-08-22T13:25:30.540-04:00
 ```
 
-R1-D is **not READY** because READY is a separate Human GO. Merge is not authorized.
+## 9. R1-D R2 — superseding exact-head CI and generated-surface parity gate
+
+Authorized R2 gate:
+
+```text
+GO R1-D R2 — EVIDENCE COHERENCE + GENERATED SURFACE PARITY
+PR=28
+AUTHORIZED_PRE_R2_HEAD=71d30dfecfb3796004ac3bd48c0f1a7772d94d3e
+```
+
+Before R2 mutation, GitHub Actions had already replaced the historical container limitation with a real exact-head regression proof:
+
+```text
+PRE_R2_CI_RUN=32596370532
+PRE_R2_CI_JOB=97087905611
+PRE_R2_EXPECTED_SHA=71d30dfecfb3796004ac3bd48c0f1a7772d94d3e
+PRE_R2_CHECKED_OUT_SHA=71d30dfecfb3796004ac3bd48c0f1a7772d94d3e
+PRE_R2_EXACT_HEAD_MATCH=true
+PRE_R2_FULL_REGRESSION=PASS
+PRE_R2_TEST_COUNT=53
+PRE_R2_FAILURES=0
+PRE_R2_ERRORS=0
+PRE_R2_RENDER=PASS
+PRE_R2_RENDER_CONTRACT=PASS
+```
+
+R2 strengthens the CI contract so the generated judge surface must also be byte-for-byte identical to the committed GitHub Pages source:
+
+```text
+python -m scripts.render_judge_demo
+cmp -s build/judge-demo/index.html docs/index.html
+```
+
+The workflow logs both SHA-256 hashes before the comparison. A mismatch fails the job; no approximate or visual-only equivalence is accepted.
+
+Because this register change itself creates a new PR head, the final R2 result must be read from GitHub Actions on the **current post-R2 exact head**. The repository intentionally does not hard-code a future untested head as PASS. The PR body / control-tower readback is the current-head evidence surface.
+
+R2 does not authorize READY or MERGE. Those remain separate Human GO gates.

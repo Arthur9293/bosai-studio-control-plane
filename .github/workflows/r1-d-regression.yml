@@ -56,9 +56,15 @@ jobs:
       - name: Render judge demo
         run: python -m scripts.render_judge_demo
 
-      - name: Verify rendered judge surface
+      - name: Verify generated surface parity
         run: |
           test -s build/judge-demo/index.html
+          test -s docs/index.html
+          sha256sum build/judge-demo/index.html docs/index.html
+          cmp -s build/judge-demo/index.html docs/index.html
+
+      - name: Verify rendered judge surface contract
+        run: |
           grep -F "Recorded evidence replay" build/judge-demo/index.html
           grep -F "IBM Bob — development-process partner" build/judge-demo/index.html
           grep -F "This surface does not call live cloud services" build/judge-demo/index.html
